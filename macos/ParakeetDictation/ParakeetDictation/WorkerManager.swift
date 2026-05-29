@@ -61,12 +61,18 @@ final class WorkerManager {
         isReady = false
     }
 
-    func transcribe(audioURL: URL, completion: @escaping (Result<String, Error>) -> Void) {
+    func transcribe(audioURL: URL, vocabulary: VocabularySettings, completion: @escaping (Result<String, Error>) -> Void) {
         do {
             let audioData = try Data(contentsOf: audioURL)
-            DebugLog.shared.info("transcribe request audio bytes=\(audioData.count)")
+            DebugLog.shared.info("transcribe request audio bytes=\(audioData.count) vocabulary=\(vocabulary.words.count)")
             let boundary = "Boundary-\(UUID().uuidString)"
             var body = Data()
+            let vocabularyJSON = try JSONEncoder().encode(vocabulary.words)
+            let vocabularyText = String(data: vocabularyJSON, encoding: .utf8) ?? "[]"
+            body.appendString("--\(boundary)\r\n")
+            body.appendString("Content-Disposition: form-data; name=\"vocabulary\"\r\n\r\n")
+            body.appendString(vocabularyText)
+            body.appendString("\r\n")
             body.appendString("--\(boundary)\r\n")
             body.appendString("Content-Disposition: form-data; name=\"file\"; filename=\"audio.wav\"\r\n")
             body.appendString("Content-Type: audio/wav\r\n\r\n")
