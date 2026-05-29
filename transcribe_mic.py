@@ -93,7 +93,13 @@ def muted_output(enabled: bool):
                 yield
 
 
-def load_model(cache_dir: str | None, device_name: str, quiet: bool) -> Any:
+def load_model(
+    cache_dir: str | None,
+    device_name: str,
+    quiet: bool,
+    model_repo: str = MODEL_REPO,
+    model_file: str = MODEL_FILE,
+) -> Any:
     import torch
     from huggingface_hub import hf_hub_download
     from nemo.collections.asr.models import ASRModel
@@ -105,8 +111,8 @@ def load_model(cache_dir: str | None, device_name: str, quiet: bool) -> Any:
         raise RuntimeError("MPS was requested, but torch.backends.mps is not available.")
 
     model_path = hf_hub_download(
-        repo_id=MODEL_REPO,
-        filename=MODEL_FILE,
+        repo_id=model_repo,
+        filename=model_file,
         cache_dir=cache_dir,
     )
 
@@ -146,15 +152,19 @@ def transcribe_audio(model: Any, audio: Any, quiet: bool) -> str:
 
     try:
         sf.write(wav_path, audio, SAMPLE_RATE)
-        with muted_output(quiet):
-            output = model.transcribe([str(wav_path)])
-        first = output[0]
-        return getattr(first, "text", first).strip()
+        return transcribe_file(model, wav_path, quiet)
     finally:
         try:
             os.unlink(wav_path)
         except FileNotFoundError:
             pass
+
+
+def transcribe_file(model: Any, wav_path: str | Path, quiet: bool) -> str:
+    with muted_output(quiet):
+        output = model.transcribe([str(wav_path)])
+    first = output[0]
+    return getattr(first, "text", first).strip()
 
 
 def main() -> None:

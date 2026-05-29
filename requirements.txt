@@ -5,3 +5,6 @@ numpy
 sounddevice
 soundfile
 nemo_toolkit[asr]
+fastapi
+uvicorn
+python-multipart
