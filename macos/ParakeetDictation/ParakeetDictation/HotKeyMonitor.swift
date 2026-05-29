@@ -4,15 +4,18 @@ import Foundation
 final class HotKeyMonitor {
     private let onPress: () -> Void
     private let onRelease: () -> Void
+    private let onEscape: () -> Bool
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var isPressed = false
+    private var isEscapeCancelling = false
     private var hotKey: HotKeySettings
 
-    init(hotKey: HotKeySettings, onPress: @escaping () -> Void, onRelease: @escaping () -> Void) {
+    init(hotKey: HotKeySettings, onPress: @escaping () -> Void, onRelease: @escaping () -> Void, onEscape: @escaping () -> Bool) {
         self.hotKey = hotKey
         self.onPress = onPress
         self.onRelease = onRelease
+        self.onEscape = onEscape
     }
 
     func updateHotKey(_ hotKey: HotKeySettings) {
@@ -74,26 +77,34 @@ final class HotKeyMonitor {
         }
 
         let keyCode = CGKeyCode(event.getIntegerValueField(.keyboardEventKeycode))
+        if keyCode == 53 {
+            if type == .keyDown {
+                if !isEscapeCancelling {
+                    isEscapeCancelling = onEscape()
+                }
+                return isEscapeCancelling ? nil : Unmanaged.passUnretained(event)
+            }
+
+            if type == .keyUp, isEscapeCancelling {
+                isEscapeCancelling = false
+                return nil
+            }
+        }
+
+        if type == .keyUp, keyCode == hotKey.keyCode, isPressed {
+            isPressed = false
+            onRelease()
+            return nil
+        }
+
         let activeModifiers = event.flags.rawValue & hotKey.modifiers.rawValue
-        let isConfiguredHotKey = keyCode == hotKey.keyCode && activeModifiers == hotKey.modifiers.rawValue
-        guard isConfiguredHotKey else { return Unmanaged.passUnretained(event) }
+        let isConfiguredHotKeyDown = type == .keyDown && keyCode == hotKey.keyCode && activeModifiers == hotKey.modifiers.rawValue
+        guard isConfiguredHotKeyDown else { return Unmanaged.passUnretained(event) }
 
-        if type == .keyDown {
-            if !isPressed {
-                isPressed = true
-                onPress()
-            }
-            return nil
+        if !isPressed {
+            isPressed = true
+            onPress()
         }
-
-        if type == .keyUp {
-            if isPressed {
-                isPressed = false
-                onRelease()
-            }
-            return nil
-        }
-
-        return Unmanaged.passUnretained(event)
+        return nil
     }
 }

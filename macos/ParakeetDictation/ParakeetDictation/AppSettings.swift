@@ -12,14 +12,34 @@ struct ModelSettings: Equatable {
     var file: String
 }
 
+struct VocabularySettings: Equatable {
+    var words: [String]
+}
+
+enum TriggerMode: String, CaseIterable {
+    case toggle
+    case hold
+
+    var displayName: String {
+        switch self {
+        case .toggle: return "Press to Start/Stop"
+        case .hold: return "Hold to Dictate"
+        }
+    }
+}
+
 enum AppSettings {
     static let defaultModel = ModelSettings(repo: "primeline/parakeet-primeline", file: "2_95_WER.nemo")
     static let defaultHotKey = HotKeySettings(keyCode: 49, modifiers: .maskAlternate)
+    static let defaultTriggerMode = TriggerMode.toggle
+    static let defaultVocabulary = VocabularySettings(words: [])
 
     private static let hotKeyKeyCodeKey = "hotKey.keyCode"
     private static let hotKeyModifiersKey = "hotKey.modifiers"
+    private static let triggerModeKey = "trigger.mode.v2"
     private static let modelRepoKey = "model.repo"
     private static let modelFileKey = "model.file"
+    private static let vocabularyWordsKey = "vocabulary.words"
 
     static var hotKey: HotKeySettings {
         get {
@@ -49,6 +69,29 @@ enum AppSettings {
         }
     }
 
+    static var triggerMode: TriggerMode {
+        get {
+            guard let value = UserDefaults.standard.string(forKey: triggerModeKey),
+                  let mode = TriggerMode(rawValue: value) else {
+                return defaultTriggerMode
+            }
+            return mode
+        }
+        set {
+            UserDefaults.standard.set(newValue.rawValue, forKey: triggerModeKey)
+        }
+    }
+
+    static var vocabulary: VocabularySettings {
+        get {
+            let words = UserDefaults.standard.stringArray(forKey: vocabularyWordsKey) ?? defaultVocabulary.words
+            return VocabularySettings(words: normalizedVocabulary(words))
+        }
+        set {
+            UserDefaults.standard.set(normalizedVocabulary(newValue.words), forKey: vocabularyWordsKey)
+        }
+    }
+
     static func displayName(for hotKey: HotKeySettings) -> String {
         var parts: [String] = []
         if hotKey.modifiers.contains(.maskControl) { parts.append("Control") }
@@ -66,6 +109,22 @@ enum AppSettings {
         if event.modifierFlags.contains(.shift) { flags.insert(.maskShift) }
         if event.modifierFlags.contains(.command) { flags.insert(.maskCommand) }
         return flags
+    }
+
+    static func normalizedVocabulary(_ words: [String]) -> [String] {
+        var seen = Set<String>()
+        var normalized: [String] = []
+
+        for word in words {
+            let value = word.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !value.isEmpty else { continue }
+            let key = value.lowercased()
+            guard !seen.contains(key) else { continue }
+            seen.insert(key)
+            normalized.append(value)
+        }
+
+        return normalized
     }
 
     private static func keyName(for keyCode: CGKeyCode) -> String {

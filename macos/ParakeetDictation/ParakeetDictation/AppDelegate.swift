@@ -1,6 +1,7 @@
 import AppKit
 import AVFoundation
 import ApplicationServices
+import Carbon.HIToolbox
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -17,6 +18,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var isTranscribing = false
     private var hotKeyActive = false
     private var hotKeyRetryTimer: Timer?
+    private var recordingStartedAt: Date?
+    private var recordingID: UUID?
+    private var partialTimer: Timer?
+    private var partialRequestInFlight = false
+    private var lastPartialText = ""
+    private var finalTranscriptionID: UUID?
+    private var pendingPasteWorkItem: DispatchWorkItem?
+    private var isCapturingHotKey = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         log.info("application did finish launching")
@@ -40,8 +49,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let monitor = HotKeyMonitor(
             hotKey: AppSettings.hotKey,
-            onPress: { [weak self] in DispatchQueue.main.async { self?.beginRecording() } },
-            onRelease: { [weak self] in DispatchQueue.main.async { self?.finishRecording() } }
+            onPress: { [weak self] in DispatchQueue.main.async { self?.handleHotKeyPress() } },
+            onRelease: { [weak self] in DispatchQueue.main.async { self?.handleHotKeyRelease() } },
+            onEscape: { [weak self] in
+                if Thread.isMainThread {
+                    return self?.cancelDictation() ?? false
+                }
+
+                var handled = false
+                DispatchQueue.main.sync {
+                    handled = self?.cancelDictation() ?? false
+                }
+                return handled
+            }
         )
         hotKeyMonitor = monitor
 
@@ -52,6 +72,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         log.info("application will terminate")
         hotKeyRetryTimer?.invalidate()
+        partialTimer?.invalidate()
         worker?.stop()
         hotKeyMonitor?.stop()
     }
@@ -117,7 +138,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             setStatus("Loading ASR worker")
         case .ready:
             log.info("worker state: ready")
-            setStatus(hotKeyActive ? "Ready - hold \(AppSettings.displayName(for: AppSettings.hotKey))" : "Error: accessibility permission needed")
+            setStatus(hotKeyActive ? readyStatusText() : "Error: accessibility permission needed")
         case .failed(let message):
             log.error("worker state: failed: \(message)")
             setStatus("Error: \(message)")
@@ -125,6 +146,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func startHotKeyMonitor(promptForAccessibility: Bool) {
+        guard !isCapturingHotKey else { return }
         guard !hotKeyActive else { return }
 
         let trusted = accessibilityTrusted(prompt: promptForAccessibility)
@@ -138,7 +160,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if hotKeyActive {
             log.info("hotkey monitor started for \(AppSettings.displayName(for: AppSettings.hotKey))")
             if worker?.isReady == true {
-                setStatus("Ready - hold \(AppSettings.displayName(for: AppSettings.hotKey))")
+                setStatus(readyStatusText())
             }
         } else {
             log.error("hotkey monitor start failed even though accessibility is trusted")
@@ -149,7 +171,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func startHotKeyRetryTimer() {
         hotKeyRetryTimer?.invalidate()
         hotKeyRetryTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
-            guard let self, !self.hotKeyActive else { return }
+            guard let self, !self.hotKeyActive, !self.isCapturingHotKey else { return }
             if self.accessibilityTrusted(prompt: false) {
                 self.log.info("accessibility is now trusted; retrying hotkey monitor")
                 self.startHotKeyMonitor(promptForAccessibility: false)
@@ -157,8 +179,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func beginRecording() {
-        log.info("hotkey pressed")
+    private func handleHotKeyPress() {
+        switch AppSettings.triggerMode {
+        case .toggle:
+            if isRecording {
+                finishRecording(reason: "hotkey pressed")
+            } else {
+                beginRecording(reason: "hotkey pressed")
+            }
+        case .hold:
+            beginRecording(reason: "hotkey pressed")
+        }
+    }
+
+    private func handleHotKeyRelease() {
+        guard AppSettings.triggerMode == .hold else { return }
+        finishRecording(reason: "hotkey released")
+    }
+
+    private func beginRecording(reason: String) {
+        log.info("recording requested: \(reason)")
         guard !isRecording && !isTranscribing else { return }
 
         guard worker?.isReady == true else {
@@ -183,9 +223,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self.log.info("previous app: \(self.previousApp?.localizedName ?? "unknown")")
                 try self.audioRecorder.start()
                 self.isRecording = true
+                self.recordingStartedAt = Date()
+                self.recordingID = UUID()
+                self.lastPartialText = ""
                 self.log.info("recording started")
-                self.setStatus("Recording")
+                self.setStatus("Recording - Escape cancels")
                 self.overlay.show("Listening...")
+                self.startPartialTranscription()
             } catch {
                 self.log.error("recording start failed: \(error.localizedDescription)")
                 self.setStatus("Error: \(error.localizedDescription)")
@@ -195,39 +239,142 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func finishRecording() {
-        log.info("hotkey released")
+    private func finishRecording(reason: String) {
+        log.info("finishing recording: \(reason)")
         guard isRecording else { return }
         isRecording = false
+        partialTimer?.invalidate()
+        partialTimer = nil
+        recordingID = nil
+        let duration = recordingStartedAt.map { Date().timeIntervalSince($0) } ?? 0
+        recordingStartedAt = nil
 
         guard let wavURL = audioRecorder.stop() else {
             log.warning("recording stop returned no WAV URL")
-            setStatus("Ready - hold \(AppSettings.displayName(for: AppSettings.hotKey))")
+            setStatus(readyStatusText())
             overlay.hide(after: 0.2)
             return
         }
-        log.info("recording stopped: \(wavURL.path)")
+        log.info("recording stopped: \(wavURL.path), duration=\(String(format: "%.2f", duration))s")
+
+        guard duration >= 0.5 else {
+            try? FileManager.default.removeItem(at: wavURL)
+            log.warning("recording ignored because it was too short")
+            setStatus(readyStatusText())
+            overlay.show(AppSettings.triggerMode == .hold ? "Hold to dictate" : "Press to dictate")
+            overlay.hide(after: 1.0)
+            return
+        }
 
         isTranscribing = true
+        let transcriptionID = UUID()
+        finalTranscriptionID = transcriptionID
         setStatus("Transcribing")
         overlay.show("Transcribing...")
 
-        worker?.transcribe(audioURL: wavURL) { [weak self] result in
+        worker?.transcribe(audioURL: wavURL, vocabulary: AppSettings.vocabulary) { [weak self] result in
             DispatchQueue.main.async {
                 try? FileManager.default.removeItem(at: wavURL)
-                self?.handleTranscription(result)
+                self?.handleTranscription(result, transcriptionID: transcriptionID)
             }
         }
     }
 
-    private func handleTranscription(_ result: Result<String, Error>) {
+    private func cancelDictation() -> Bool {
+        guard isRecording || isTranscribing || overlay.isVisible else { return false }
+
+        log.info("dictation cancelled with Escape")
+        let wasRecording = isRecording
+        let wasActive = isRecording || isTranscribing
+        isRecording = false
+        isTranscribing = false
+        finalTranscriptionID = nil
+        pendingPasteWorkItem?.cancel()
+        pendingPasteWorkItem = nil
+        partialTimer?.invalidate()
+        partialTimer = nil
+        recordingID = nil
+        recordingStartedAt = nil
+        if wasRecording {
+            audioRecorder.cancel()
+        }
+
+        setStatus(readyStatusText())
+        if wasActive {
+            overlay.show("Cancelled")
+            overlay.hide(after: 0.8)
+        } else {
+            overlay.hide()
+        }
+        return true
+    }
+
+    private func startPartialTranscription() {
+        partialTimer?.invalidate()
+        guard let recordingID else { return }
+
+        partialTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            self?.requestPartialTranscription(recordingID: recordingID)
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) { [weak self] in
+            self?.requestPartialTranscription(recordingID: recordingID)
+        }
+    }
+
+    private func requestPartialTranscription(recordingID: UUID) {
+        guard isRecording,
+              self.recordingID == recordingID,
+              !partialRequestInFlight,
+              worker?.isReady == true else {
+            return
+        }
+
+        let duration = recordingStartedAt.map { Date().timeIntervalSince($0) } ?? 0
+        guard duration >= 1.0, let snapshotURL = audioRecorder.snapshot() else { return }
+
+        partialRequestInFlight = true
+        log.info("partial transcription request: \(snapshotURL.path), duration=\(String(format: "%.2f", duration))s")
+
+        worker?.transcribe(audioURL: snapshotURL, vocabulary: AppSettings.vocabulary) { [weak self] result in
+            DispatchQueue.main.async {
+                try? FileManager.default.removeItem(at: snapshotURL)
+                guard let self else { return }
+                self.partialRequestInFlight = false
+
+                guard self.isRecording, self.recordingID == recordingID else {
+                    self.log.info("ignored stale partial transcription result")
+                    return
+                }
+
+                switch result {
+                case .success(let text):
+                    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                    guard !trimmed.isEmpty, trimmed != self.lastPartialText else { return }
+                    self.lastPartialText = trimmed
+                    self.log.info("partial transcription update, characters=\(trimmed.count)")
+                    self.overlay.show(trimmed)
+                case .failure(let error):
+                    self.log.warning("partial transcription failed: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+    private func handleTranscription(_ result: Result<String, Error>, transcriptionID: UUID) {
+        guard finalTranscriptionID == transcriptionID else {
+            log.info("ignored stale final transcription result")
+            return
+        }
+
+        finalTranscriptionID = nil
         isTranscribing = false
 
         switch result {
         case .success(let text):
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
             log.info("transcription succeeded, characters=\(trimmed.count)")
-            setStatus("Ready - hold \(AppSettings.displayName(for: AppSettings.hotKey))")
+            setStatus(readyStatusText())
 
             guard !trimmed.isEmpty else {
                 log.warning("transcription was empty")
@@ -261,9 +408,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         log.info("pasting transcript into app: \(previousApp?.localizedName ?? "unknown")")
         previousApp?.activate(options: [.activateIgnoringOtherApps])
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            Self.sendCommandV()
+        pendingPasteWorkItem?.cancel()
+        let pasteWorkItem = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.pendingPasteWorkItem = nil
+            if let previousApp = self.previousApp, Self.performAccessibilityPaste(in: previousApp) {
+                self.log.info("paste completed via Accessibility menu action")
+            } else {
+                self.log.warning("Accessibility menu paste failed; falling back to keyboard shortcut")
+                Self.sendCommandV()
+            }
         }
+        pendingPasteWorkItem = pasteWorkItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: pasteWorkItem)
     }
 
     private func ensureMicrophonePermission(_ completion: @escaping (Bool) -> Void) {
@@ -284,6 +441,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setStatus(_ text: String) {
         statusMenuItem.title = "Status: \(text)"
         statusItem.button?.toolTip = text
+    }
+
+    private func readyStatusText() -> String {
+        let hotKey = AppSettings.displayName(for: AppSettings.hotKey)
+        switch AppSettings.triggerMode {
+        case .toggle:
+            return "Ready - press \(hotKey)"
+        case .hold:
+            return "Ready - hold \(hotKey)"
+        }
     }
 
     @objc private func checkPermissions() {
@@ -313,15 +480,38 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openPreferences() {
         if preferencesWindowController == nil {
-            preferencesWindowController = PreferencesWindowController { [weak self] hotKey, model in
-                self?.applyPreferences(hotKey: hotKey, model: model)
-            }
+            preferencesWindowController = PreferencesWindowController(
+                onSave: { [weak self] hotKey, triggerMode, model, vocabulary in
+                    self?.applyPreferences(hotKey: hotKey, triggerMode: triggerMode, model: model, vocabulary: vocabulary)
+                },
+                onCaptureStarted: { [weak self] in
+                    self?.suspendHotKeyMonitorForCapture()
+                },
+                onCaptureEnded: { [weak self] in
+                    self?.resumeHotKeyMonitorAfterCapture()
+                }
+            )
         }
         preferencesWindowController?.show()
     }
 
-    private func applyPreferences(hotKey: HotKeySettings, model: ModelSettings) {
-        log.info("preferences saved hotkey=\(AppSettings.displayName(for: hotKey)) model=\(model.repo) file=\(model.file)")
+    private func suspendHotKeyMonitorForCapture() {
+        guard !isCapturingHotKey else { return }
+        log.info("suspending hotkey monitor for shortcut capture")
+        isCapturingHotKey = true
+        hotKeyMonitor?.stop()
+        hotKeyActive = false
+    }
+
+    private func resumeHotKeyMonitorAfterCapture() {
+        guard isCapturingHotKey else { return }
+        log.info("resuming hotkey monitor after shortcut capture")
+        isCapturingHotKey = false
+        startHotKeyMonitor(promptForAccessibility: false)
+    }
+
+    private func applyPreferences(hotKey: HotKeySettings, triggerMode: TriggerMode, model: ModelSettings, vocabulary: VocabularySettings) {
+        log.info("preferences saved hotkey=\(AppSettings.displayName(for: hotKey)) triggerMode=\(triggerMode.rawValue) model=\(model.repo) file=\(model.file) vocabulary=\(vocabulary.words.count)")
         hotKeyMonitor?.updateHotKey(hotKey)
         startHotKeyMonitor(promptForAccessibility: true)
         worker?.updateModel(model)
@@ -349,7 +539,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private static func sendCommandV() {
         guard let source = CGEventSource(stateID: .hidSystemState) else { return }
-        let keyCodeForV: CGKeyCode = 9
+        let keyCodeForV = keyCode(forCharacter: "v") ?? 9
+        DebugLog.shared.info("sending paste shortcut using keyCode=\(keyCodeForV)")
 
         let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCodeForV, keyDown: true)
         keyDown?.flags = .maskCommand
@@ -358,5 +549,121 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         keyDown?.post(tap: .cghidEventTap)
         keyUp?.post(tap: .cghidEventTap)
+    }
+
+    private static func performAccessibilityPaste(in app: NSRunningApplication) -> Bool {
+        let appElement = AXUIElementCreateApplication(app.processIdentifier)
+        guard let menuBar = axElementAttribute(appElement, kAXMenuBarAttribute as CFString) else {
+            DebugLog.shared.warning("could not read menu bar for \(app.localizedName ?? "unknown app")")
+            return false
+        }
+
+        let menuBarItems = axChildren(of: menuBar)
+        let editItems = menuBarItems.filter { item in
+            let title = axStringAttribute(item, kAXTitleAttribute as CFString)?.lowercased() ?? ""
+            return title == "edit" || title == "bearbeiten"
+        }
+
+        for menuBarItem in editItems + menuBarItems {
+            AXUIElementPerformAction(menuBarItem, kAXPressAction as CFString)
+            usleep(80_000)
+
+            if let pasteItem = findPasteMenuItem(in: menuBarItem) ?? findPasteMenuItem(in: menuBar) {
+                let result = AXUIElementPerformAction(pasteItem, kAXPressAction as CFString)
+                return result == .success
+            }
+        }
+
+        return false
+    }
+
+    private static func findPasteMenuItem(in element: AXUIElement) -> AXUIElement? {
+        if isPasteMenuItem(element) {
+            return element
+        }
+
+        for child in axChildren(of: element) {
+            if let found = findPasteMenuItem(in: child) {
+                return found
+            }
+        }
+
+        return nil
+    }
+
+    private static func isPasteMenuItem(_ element: AXUIElement) -> Bool {
+        let title = axStringAttribute(element, kAXTitleAttribute as CFString)?.lowercased() ?? ""
+        if title == "paste" || title == "einsetzen" || title == "einfügen" {
+            return true
+        }
+
+        if let command = axStringAttribute(element, kAXMenuItemCmdCharAttribute as CFString)?.lowercased(), command == "v" {
+            return !title.contains("match") && !title.contains("style") && !title.contains("stil")
+        }
+
+        return false
+    }
+
+    private static func axElementAttribute(_ element: AXUIElement, _ attribute: CFString) -> AXUIElement? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, attribute, &value) == .success, let value else {
+            return nil
+        }
+        return unsafeBitCast(value, to: AXUIElement.self)
+    }
+
+    private static func axStringAttribute(_ element: AXUIElement, _ attribute: CFString) -> String? {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, attribute, &value) == .success else {
+            return nil
+        }
+        return value as? String
+    }
+
+    private static func axChildren(of element: AXUIElement) -> [AXUIElement] {
+        var value: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &value) == .success else {
+            return []
+        }
+        return value as? [AXUIElement] ?? []
+    }
+
+    private static func keyCode(forCharacter target: Character) -> CGKeyCode? {
+        guard let inputSource = TISCopyCurrentKeyboardLayoutInputSource()?.takeRetainedValue(),
+              let layoutData = TISGetInputSourceProperty(inputSource, kTISPropertyUnicodeKeyLayoutData) else {
+            DebugLog.shared.warning("could not read current keyboard layout; falling back to ANSI V key")
+            return nil
+        }
+
+        let data = unsafeBitCast(layoutData, to: CFData.self)
+        let keyboardLayout = unsafeBitCast(CFDataGetBytePtr(data), to: UnsafePointer<UCKeyboardLayout>.self)
+        let targetString = String(target).lowercased()
+
+        for keyCode in UInt16(0)..<UInt16(128) {
+            var deadKeyState: UInt32 = 0
+            var length = 0
+            var chars = [UniChar](repeating: 0, count: 4)
+            let status = UCKeyTranslate(
+                keyboardLayout,
+                keyCode,
+                UInt16(kUCKeyActionDown),
+                0,
+                UInt32(LMGetKbdType()),
+                OptionBits(kUCKeyTranslateNoDeadKeysBit),
+                &deadKeyState,
+                chars.count,
+                &length,
+                &chars
+            )
+
+            guard status == noErr, length > 0 else { continue }
+            let value = String(utf16CodeUnits: chars, count: length).lowercased()
+            if value == targetString {
+                return CGKeyCode(keyCode)
+            }
+        }
+
+        DebugLog.shared.warning("could not find keycode for character '\(target)' in current keyboard layout")
+        return nil
     }
 }
