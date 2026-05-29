@@ -1,12 +1,50 @@
 # DeskScribe
 
-DeskScribe is a macOS menu bar dictation app backed by local NeMo ASR. The terminal script runs [`primeline/parakeet-primeline`](https://huggingface.co/primeline/parakeet-primeline) locally, records microphone audio in short chunks, and prints each transcription to the terminal.
+DeskScribe is a macOS menu bar dictation app backed by local NeMo ASR.
 
-The model is optimized for German ASR and is a 600M parameter NeMo checkpoint. CPU inference on a Mac can be slow, especially on first run.
+It is 100% AI slop, including this README, but it works.
 
-## Setup
+## What It Does
 
-Use the project virtualenv. On this machine it was created with `/opt/homebrew/bin/python3.13`.
+- Runs speech recognition locally on your Mac.
+- Uses [`primeline/parakeet-primeline`](https://huggingface.co/primeline/parakeet-primeline) by default.
+- Starts and stops dictation with `Option+Space`.
+- Shows live partial transcription while recording.
+- Pastes the final transcript into the previously active app.
+- Supports custom hotkeys, trigger mode, model repo/file, and vocabulary hints.
+
+The default model is optimized for German ASR and is a 600M parameter NeMo checkpoint. CPU inference on a Mac can be slow, especially on first run.
+
+## macOS App
+
+A development Xcode project lives at:
+
+```bash
+macos/ParakeetDictation/ParakeetDictation.xcodeproj
+```
+
+Open it with:
+
+```bash
+open macos/ParakeetDictation/ParakeetDictation.xcodeproj
+```
+
+The app is menu bar-only. It launches `.venv/bin/python asr_worker.py`, talks to the local worker over HTTP, records microphone audio, transcribes it, and pastes the result.
+
+Debug logs are written to:
+
+```bash
+~/Library/Logs/DeskScribe/DeskScribe.log
+```
+
+Permissions needed:
+
+- Microphone access for recording.
+- Accessibility access for the global hotkey event tap and automatic paste.
+
+## Python Setup
+
+Use a virtualenv. On the original development machine this was created with `/opt/homebrew/bin/python3.13`.
 
 ```bash
 /opt/homebrew/bin/python3.13 -m venv .venv
@@ -24,7 +62,9 @@ pip install --force-reinstall sounddevice
 
 macOS may ask for Terminal microphone permission the first time this runs. If recording fails, enable microphone access for your terminal app in `System Settings > Privacy & Security > Microphone`.
 
-## Run
+## Terminal Transcription
+
+The original terminal script still works:
 
 ```bash
 source .venv/bin/activate
@@ -61,34 +101,23 @@ POST http://127.0.0.1:8765/transcribe
 
 `POST /transcribe` accepts a multipart WAV upload named `file` and returns JSON like `{ "text": "..." }`.
 
-## macOS App
+## Worker Lookup
 
-A development Xcode project lives at `macos/ParakeetDictation/ParakeetDictation.xcodeproj`.
-
-The app is a menu bar-only AppKit app. It launches `.venv/bin/python asr_worker.py`, uses `Option+Space` as the default global hotkey, records in toggle mode by default, sends the final WAV to the worker, then pastes the final transcript into the previously active app.
-
-Use the menu bar Preferences item to change the hotkey or model repo/file. Changing the model restarts the worker so the selected Hugging Face `.nemo` file can be downloaded/loaded.
-
-Debug logs are written to `~/Library/Logs/DeskScribe/DeskScribe.log` and can be opened from the menu bar item.
-
-Development notes:
+The app first looks for a bundled worker at:
 
 ```bash
-open macos/ParakeetDictation/ParakeetDictation.xcodeproj
+DeskScribe.app/Contents/Resources/Worker
 ```
 
-The app first looks for a bundled worker at `DeskScribe.app/Contents/Resources/Worker`. Development builds fall back to the repo root from `DeskScribeWorkerRoot` in `Info.plist`. You can override either path at runtime with `DESKSCRIBE_WORKER_ROOT=/path/to/repo`.
+Development builds fall back to the repo root from `DeskScribeWorkerRoot` in `Info.plist`. You can override either path at runtime:
 
-macOS permissions needed:
+```bash
+DESKSCRIBE_WORKER_ROOT=/path/to/repo
+```
 
-- Microphone access for recording.
-- Accessibility access for the global hotkey event tap and automatic paste.
+## Releases
 
-## GitHub Releases and Homebrew
-
-The Homebrew path is a cask that downloads a zipped `.app` from GitHub Releases. The release `.app` bundles the Python worker and virtualenv under `Contents/Resources/Worker`, so it does not depend on this repo or a local `.venv` path after installation.
-
-Build a release artifact:
+Build a zipped app for GitHub Releases:
 
 ```bash
 CODE_SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
@@ -108,20 +137,25 @@ dist/DeskScribe-0.1.0-macos.zip
 dist/DeskScribe-0.1.0-macos.zip.sha256
 ```
 
-Publish the zip to a GitHub Release named `v0.1.0`, then update `homebrew/Casks/deskscribe.rb`:
+For public distribution, sign with a Developer ID certificate and notarize the zip before attaching it to GitHub Releases. Otherwise, users may need to manually approve the app in macOS Gatekeeper.
 
-```ruby
-version "0.1.0"
-sha256 "<sha256 from dist/*.sha256>"
-url "https://github.com/geier/deskscribe/releases/download/v#{version}/DeskScribe-#{version}-macos.zip"
-homepage "https://github.com/geier/deskscribe"
+## Homebrew
+
+The cask template lives at:
+
+```bash
+homebrew/Casks/deskscribe.rb
 ```
 
-For a private tap, copy the cask into a repo named like `homebrew-deskscribe` under `Casks/deskscribe.rb`. Users can then install with:
+After publishing a release, update the cask version and sha256. It downloads:
+
+```ruby
+url "https://github.com/geier/deskscribe/releases/download/v#{version}/DeskScribe-#{version}-macos.zip"
+```
+
+Install from a tap with:
 
 ```bash
 brew tap <owner>/deskscribe
 brew install --cask deskscribe
 ```
-
-For public distribution, sign with a Developer ID certificate and notarize the zip before attaching it to GitHub Releases. Otherwise, users may need to manually approve the app in macOS Gatekeeper.
