@@ -4,6 +4,10 @@ import ApplicationServices
 import Carbon.HIToolbox
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private struct SavedPasteboardItem {
+        let dataByType: [(NSPasteboard.PasteboardType, Data)]
+    }
+
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let statusMenuItem = NSMenuItem(title: "Status: Launching", action: nil, keyEquivalent: "")
     private let log = DebugLog.shared
@@ -25,6 +29,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var lastPartialText = ""
     private var finalTranscriptionID: UUID?
     private var pendingPasteWorkItem: DispatchWorkItem?
+    private var pendingPasteboardRestoreWorkItem: DispatchWorkItem?
     private var isCapturingHotKey = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -298,6 +303,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         finalTranscriptionID = nil
         pendingPasteWorkItem?.cancel()
         pendingPasteWorkItem = nil
+        pendingPasteboardRestoreWorkItem?.cancel()
+        pendingPasteboardRestoreWorkItem = nil
         partialTimer?.invalidate()
         partialTimer = nil
         recordingID = nil
@@ -390,9 +397,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
 
-            overlay.show(trimmed)
+            overlay.hide()
             pasteIntoPreviousApp(trimmed)
-            overlay.hide(after: 1.6)
 
         case .failure(let error):
             log.error("transcription failed: \(error.localizedDescription)")
@@ -410,24 +416,46 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let pasteboard = NSPasteboard.general
+        let savedPasteboard = Self.savePasteboard(pasteboard)
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
+        let transcriptChangeCount = pasteboard.changeCount
 
         log.info("pasting transcript into app: \(previousApp?.localizedName ?? "unknown")")
         previousApp?.activate(options: [.activateIgnoringOtherApps])
         pendingPasteWorkItem?.cancel()
+        pendingPasteboardRestoreWorkItem?.cancel()
         let pasteWorkItem = DispatchWorkItem { [weak self] in
             guard let self else { return }
             self.pendingPasteWorkItem = nil
-            if let previousApp = self.previousApp, Self.performAccessibilityPaste(in: previousApp) {
-                self.log.info("paste completed via Accessibility menu action")
+            if Self.sendCommandV() {
+                self.log.info("paste shortcut sent")
+            } else if let previousApp = self.previousApp, Self.performAccessibilityPaste(in: previousApp) {
+                self.log.warning("paste completed via visible Accessibility menu fallback")
             } else {
-                self.log.warning("Accessibility menu paste failed; falling back to keyboard shortcut")
-                Self.sendCommandV()
+                self.log.error("paste failed")
             }
+            self.restorePasteboard(savedPasteboard, expectedChangeCount: transcriptChangeCount, transcriptText: text, after: 0.8)
         }
         pendingPasteWorkItem = pasteWorkItem
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: pasteWorkItem)
+    }
+
+    private func restorePasteboard(_ savedPasteboard: [SavedPasteboardItem], expectedChangeCount: Int, transcriptText: String, after delay: TimeInterval) {
+        let restoreWorkItem = DispatchWorkItem { [weak self] in
+            let pasteboard = NSPasteboard.general
+            guard pasteboard.changeCount == expectedChangeCount,
+                  pasteboard.string(forType: .string) == transcriptText else {
+                self?.log.info("skipped pasteboard restore because clipboard changed")
+                return
+            }
+
+            Self.restorePasteboard(savedPasteboard, to: pasteboard)
+            self?.pendingPasteboardRestoreWorkItem = nil
+            self?.log.info("pasteboard restored after paste")
+        }
+        pendingPasteboardRestoreWorkItem = restoreWorkItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: restoreWorkItem)
     }
 
     private func ensureMicrophonePermission(_ completion: @escaping (Bool) -> Void) {
@@ -544,9 +572,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return AXIsProcessTrustedWithOptions(options)
     }
 
-    private static func sendCommandV() {
-        guard let source = CGEventSource(stateID: .hidSystemState) else { return }
-        let keyCodeForV = keyCode(forCharacter: "v") ?? 9
+    private static func sendCommandV() -> Bool {
+        guard let source = CGEventSource(stateID: .hidSystemState) else { return false }
+        guard let keyCodeForV = keyCode(forCharacter: "v") else { return false }
         DebugLog.shared.info("sending paste shortcut using keyCode=\(keyCodeForV)")
 
         let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCodeForV, keyDown: true)
@@ -554,8 +582,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCodeForV, keyDown: false)
         keyUp?.flags = .maskCommand
 
-        keyDown?.post(tap: .cghidEventTap)
-        keyUp?.post(tap: .cghidEventTap)
+        guard let keyDown, let keyUp else { return false }
+
+        keyDown.post(tap: .cghidEventTap)
+        keyUp.post(tap: .cghidEventTap)
+        return true
+    }
+
+    private static func savePasteboard(_ pasteboard: NSPasteboard) -> [SavedPasteboardItem] {
+        pasteboard.pasteboardItems?.map { item in
+            let dataByType = item.types.compactMap { type -> (NSPasteboard.PasteboardType, Data)? in
+                guard let data = item.data(forType: type) else { return nil }
+                return (type, data)
+            }
+            return SavedPasteboardItem(dataByType: dataByType)
+        } ?? []
+    }
+
+    private static func restorePasteboard(_ savedItems: [SavedPasteboardItem], to pasteboard: NSPasteboard) {
+        pasteboard.clearContents()
+        guard !savedItems.isEmpty else { return }
+
+        let restoredItems = savedItems.map { savedItem in
+            let item = NSPasteboardItem()
+            for (type, data) in savedItem.dataByType {
+                item.setData(data, forType: type)
+            }
+            return item
+        }
+        pasteboard.writeObjects(restoredItems)
     }
 
     private static func performAccessibilityPaste(in app: NSRunningApplication) -> Bool {
