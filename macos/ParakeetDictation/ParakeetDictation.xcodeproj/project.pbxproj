@@ -19,7 +19,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		A10000000000000000000010 /* ParakeetDictation.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ParakeetDictation.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10000000000000000000010 /* DeskScribe.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeskScribe.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000000000000000000011 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		A10000000000000000000012 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		A10000000000000000000013 /* AudioRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecorder.swift; sourceTree = "<group>"; };
@@ -54,7 +54,7 @@
 		A10000000000000000000031 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A10000000000000000000010 /* ParakeetDictation.app */,
+				A10000000000000000000010 /* DeskScribe.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -92,7 +92,7 @@
 			);
 			name = ParakeetDictation;
 			productName = ParakeetDictation;
-			productReference = A10000000000000000000010 /* ParakeetDictation.app */;
+			productReference = A10000000000000000000010 /* DeskScribe.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -279,8 +279,8 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = local.ParakeetDictation;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = local.DeskScribe;
+				PRODUCT_NAME = DeskScribe;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
@@ -301,8 +301,8 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.1;
-				PRODUCT_BUNDLE_IDENTIFIER = local.ParakeetDictation;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = local.DeskScribe;
+				PRODUCT_NAME = DeskScribe;
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;

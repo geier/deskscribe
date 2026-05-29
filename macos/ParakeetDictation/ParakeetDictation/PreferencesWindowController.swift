@@ -30,7 +30,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-        window.title = "ParakeetDictation Preferences"
+        window.title = "DeskScribe Preferences"
         window.center()
         super.init(window: window)
         window.delegate = self

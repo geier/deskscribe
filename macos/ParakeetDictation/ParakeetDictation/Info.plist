@@ -28,8 +28,8 @@
 		<true/>
 	</dict>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>ParakeetDictation records while the dictation hotkey is held.</string>
-	<key>ParakeetRepoRoot</key>
+	<string>DeskScribe records audio while dictation is active.</string>
+	<key>DeskScribeWorkerRoot</key>
 	<string>$(SRCROOT)/../..</string>
 </dict>
 </plist>

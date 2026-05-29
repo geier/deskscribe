@@ -3,7 +3,7 @@ import Foundation
 
 final class AudioRecorder {
     private let sampleRate = 16_000.0
-    private let queue = DispatchQueue(label: "ParakeetDictation.AudioRecorder")
+    private let queue = DispatchQueue(label: "DeskScribe.AudioRecorder")
     private var engine: AVAudioEngine?
     private var inputSampleRate = 44_100.0
     private var samples: [Float] = []
@@ -81,7 +81,7 @@ final class AudioRecorder {
         guard !resampled.isEmpty else { return nil }
 
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("ParakeetDictation-\(UUID().uuidString)")
+            .appendingPathComponent("DeskScribe-\(UUID().uuidString)")
             .appendingPathExtension("wav")
 
         var data = Data()

@@ -4,14 +4,14 @@ final class DebugLog {
     static let shared = DebugLog()
 
     let url: URL
-    private let queue = DispatchQueue(label: "ParakeetDictation.DebugLog")
+    private let queue = DispatchQueue(label: "DeskScribe.DebugLog")
     private let formatter = ISO8601DateFormatter()
 
     private init() {
         let directory = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Logs/ParakeetDictation", isDirectory: true)
+            .appendingPathComponent("Library/Logs/DeskScribe", isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        url = directory.appendingPathComponent("ParakeetDictation.log")
+        url = directory.appendingPathComponent("DeskScribe.log")
         info("--- app session started ---")
     }
 
@@ -40,13 +40,13 @@ final class DebugLog {
                     try handle.write(contentsOf: data)
                     try handle.close()
                 } catch {
-                    NSLog("ParakeetDictation log write failed: \(error.localizedDescription)")
+                    NSLog("DeskScribe log write failed: \(error.localizedDescription)")
                 }
             } else {
                 try? data.write(to: url)
             }
         }
 
-        NSLog("ParakeetDictation [\(level)] \(message)")
+        NSLog("DeskScribe [\(level)] \(message)")
     }
 }
