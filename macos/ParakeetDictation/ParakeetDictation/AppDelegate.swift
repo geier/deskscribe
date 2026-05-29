@@ -78,11 +78,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func setupMenu() {
-        if let image = NSImage(systemSymbolName: "mic.circle", accessibilityDescription: "ParakeetDictation") {
+        if let image = NSImage(systemSymbolName: "mic.circle", accessibilityDescription: "DeskScribe") {
             image.isTemplate = true
             statusItem.button?.image = image
         } else {
-            statusItem.button?.title = "Parakeet"
+            statusItem.button?.title = "DeskScribe"
         }
 
         let menu = NSMenu()
@@ -106,13 +106,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func resolveRepoRoot() -> URL? {
-        if let envPath = ProcessInfo.processInfo.environment["PARAKEET_REPO_ROOT"] {
-            log.info("using PARAKEET_REPO_ROOT=\(envPath)")
+        if let envPath = ProcessInfo.processInfo.environment["DESKSCRIBE_WORKER_ROOT"] {
+            log.info("using DESKSCRIBE_WORKER_ROOT=\(envPath)")
             return validRepoRoot(URL(fileURLWithPath: envPath))
         }
 
-        if let plistPath = Bundle.main.object(forInfoDictionaryKey: "ParakeetRepoRoot") as? String {
-            log.info("using ParakeetRepoRoot Info.plist value=\(plistPath)")
+        if let bundledWorkerURL = Bundle.main.resourceURL?.appendingPathComponent("Worker") {
+            log.info("checking bundled worker path=\(bundledWorkerURL.path)")
+            if let repoRoot = validRepoRoot(bundledWorkerURL) {
+                return repoRoot
+            }
+        }
+
+        if let plistPath = Bundle.main.object(forInfoDictionaryKey: "DeskScribeWorkerRoot") as? String {
+            log.info("using DeskScribeWorkerRoot Info.plist value=\(plistPath)")
             return validRepoRoot(URL(fileURLWithPath: plistPath).standardizedFileURL)
         }
 
@@ -213,7 +220,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard granted else {
                 self.log.error("microphone permission missing")
                 self.setStatus("Error: microphone permission needed")
-                self.overlay.show("Enable microphone permission for ParakeetDictation")
+                self.overlay.show("Enable microphone permission for DeskScribe")
                 self.overlay.hide(after: 2.0)
                 return
             }
