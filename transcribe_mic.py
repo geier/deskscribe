@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 import argparse
+import contextlib
+import logging
 import os
 import tempfile
+import warnings
 from pathlib import Path
 from typing import Any
 
@@ -49,6 +52,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="List local audio devices and exit.",
     )
+    parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Show NeMo warnings and transcription progress bars.",
+    )
     return parser.parse_args()
 
 
@@ -58,10 +66,40 @@ def normalize_input_device(input_device: str | None) -> int | str | None:
     return int(input_device) if input_device.isdigit() else input_device
 
 
-def load_model(cache_dir: str | None, device_name: str) -> Any:
+def configure_quiet_logging() -> None:
+    logging.getLogger("nemo_logger").setLevel(logging.ERROR)
+    logging.getLogger("pytorch_lightning").setLevel(logging.ERROR)
+    logging.getLogger("lightning").setLevel(logging.ERROR)
+    warnings.filterwarnings("ignore")
+
+    try:
+        from nemo.utils import logging as nemo_logging
+
+        nemo_logging.set_verbosity(nemo_logging.ERROR)
+    except Exception:
+        pass
+
+
+@contextlib.contextmanager
+def muted_output(enabled: bool):
+    if not enabled:
+        yield
+        return
+
+    with open(os.devnull, "w") as devnull:
+        with contextlib.redirect_stdout(devnull), contextlib.redirect_stderr(devnull):
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                yield
+
+
+def load_model(cache_dir: str | None, device_name: str, quiet: bool) -> Any:
     import torch
     from huggingface_hub import hf_hub_download
     from nemo.collections.asr.models import ASRModel
+
+    if quiet:
+        configure_quiet_logging()
 
     if device_name == "mps" and not torch.backends.mps.is_available():
         raise RuntimeError("MPS was requested, but torch.backends.mps is not available.")
@@ -100,7 +138,7 @@ def rms(audio: Any) -> float:
     return float(np.sqrt(np.mean(np.square(audio))))
 
 
-def transcribe_audio(model: Any, audio: Any) -> str:
+def transcribe_audio(model: Any, audio: Any, quiet: bool) -> str:
     import soundfile as sf
 
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as handle:
@@ -108,7 +146,8 @@ def transcribe_audio(model: Any, audio: Any) -> str:
 
     try:
         sf.write(wav_path, audio, SAMPLE_RATE)
-        output = model.transcribe([str(wav_path)])
+        with muted_output(quiet):
+            output = model.transcribe([str(wav_path)])
         first = output[0]
         return getattr(first, "text", first).strip()
     finally:
@@ -128,7 +167,8 @@ def main() -> None:
         return
 
     print(f"Loading {MODEL_REPO}. First run downloads the checkpoint and can take a while.")
-    model = load_model(args.cache_dir, args.device)
+    quiet = not args.verbose
+    model = load_model(args.cache_dir, args.device, quiet)
     input_device = normalize_input_device(args.input_device)
     print(
         f"Listening on the local microphone in {args.chunk_seconds:g}s chunks at {SAMPLE_RATE} Hz. "
@@ -144,7 +184,7 @@ def main() -> None:
                 print(f"[silence rms={level:.4f}]", flush=True)
                 continue
 
-            text = transcribe_audio(model, audio)
+            text = transcribe_audio(model, audio, quiet)
             if text:
                 print(text, flush=True)
             else:
