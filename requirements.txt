@@ -1,0 +1,7 @@
+torch
+torchaudio
+huggingface_hub
+numpy
+sounddevice
+soundfile
+nemo_toolkit[asr]
