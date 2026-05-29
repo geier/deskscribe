@@ -6,10 +6,10 @@ The model is optimized for German ASR and is a 600M parameter NeMo checkpoint. C
 
 ## Setup
 
-Use Python 3.11 if possible. The current machine has Python 3.11 available.
+Use the project virtualenv. On this machine it was created with `/opt/homebrew/bin/python3.13`.
 
 ```bash
-python3 -m venv .venv
+/opt/homebrew/bin/python3.13 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
@@ -42,3 +42,44 @@ python transcribe_mic.py --verbose
 ```
 
 `--device mps` is available, but `--device cpu` is the safest default for NeMo on macOS.
+
+## HTTP Worker
+
+The macOS app uses a long-running local worker so the NeMo model loads once:
+
+```bash
+source .venv/bin/activate
+python asr_worker.py
+```
+
+Endpoints:
+
+```bash
+GET http://127.0.0.1:8765/health
+POST http://127.0.0.1:8765/transcribe
+```
+
+`POST /transcribe` accepts a multipart WAV upload named `file` and returns JSON like `{ "text": "..." }`.
+
+## macOS App
+
+A development Xcode project lives at `macos/ParakeetDictation/ParakeetDictation.xcodeproj`.
+
+The app is a menu bar-only AppKit app. It launches `.venv/bin/python asr_worker.py`, uses `Option+Space` as a press-and-hold global hotkey, records while held, sends the final WAV to the worker, then pastes the final transcript into the previously active app.
+
+Use the menu bar Preferences item to change the hotkey or model repo/file. Changing the model restarts the worker so the selected Hugging Face `.nemo` file can be downloaded/loaded.
+
+Debug logs are written to `~/Library/Logs/ParakeetDictation/ParakeetDictation.log` and can be opened from the menu bar item.
+
+Development notes:
+
+```bash
+open macos/ParakeetDictation/ParakeetDictation.xcodeproj
+```
+
+The app expects the repo root from its built `ParakeetRepoRoot` Info.plist value. You can override that at runtime with `PARAKEET_REPO_ROOT=/path/to/repo`.
+
+macOS permissions needed:
+
+- Microphone access for recording.
+- Accessibility access for the global hotkey event tap and automatic paste.
