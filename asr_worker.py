@@ -9,7 +9,7 @@ import threading
 from contextlib import asynccontextmanager
 from difflib import SequenceMatcher
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 
@@ -33,6 +33,11 @@ NUMBER_WORDS = {
     "nine": "9",
     "ten": "10",
 }
+
+
+class Hotword(NamedTuple):
+    spoken: str
+    replacement: str
 
 
 def parse_args() -> argparse.Namespace:
@@ -147,7 +152,7 @@ def create_app(
     return app
 
 
-def parse_vocabulary(value: str | None) -> list[str]:
+def parse_vocabulary(value: str | None) -> list[Hotword]:
     if not value:
         return []
 
@@ -160,28 +165,43 @@ def parse_vocabulary(value: str | None) -> list[str]:
     except json.JSONDecodeError:
         candidates = value.splitlines()
 
-    seen: set[str] = set()
-    words: list[str] = []
+    seen: set[tuple[str, str]] = set()
+    words: list[Hotword] = []
     for candidate in candidates:
         word = candidate.strip()
         if not word:
             continue
-        key = normalize_hotword(word)
-        if key and key not in seen:
+
+        spoken, replacement = parse_hotword_entry(word)
+        spoken_key = normalize_hotword(spoken)
+        replacement_key = normalize_hotword(replacement)
+        key = (spoken_key, replacement_key)
+        if spoken_key and replacement_key and key not in seen:
             seen.add(key)
-            words.append(word)
+            words.append(Hotword(spoken=spoken, replacement=replacement))
     return words
 
 
-def apply_hotwords(text: str, hotwords: list[str]) -> str:
+def parse_hotword_entry(value: str) -> tuple[str, str]:
+    for separator in ("=>", "->"):
+        if separator in value:
+            spoken, replacement = value.split(separator, 1)
+            spoken = spoken.strip()
+            replacement = replacement.strip()
+            if spoken and replacement:
+                return spoken, replacement
+    return value, value
+
+
+def apply_hotwords(text: str, hotwords: list[Hotword]) -> str:
     if not text or not hotwords:
         return text
 
     tokens = TOKEN_RE.findall(text)
     word_indexes = [index for index, token in enumerate(tokens) if token.strip() and re.search(r"\w", token)]
 
-    for hotword in sorted(hotwords, key=lambda value: len(normalize_hotword(value)), reverse=True):
-        hotword_parts = normalize_hotword(hotword).split()
+    for hotword in sorted(hotwords, key=lambda value: len(normalize_hotword(value.spoken)), reverse=True):
+        hotword_parts = normalize_hotword(hotword.spoken).split()
         if not hotword_parts:
             continue
 
@@ -193,14 +213,15 @@ def apply_hotwords(text: str, hotwords: list[str]) -> str:
             candidate = " ".join(tokens[index] for index in indexes)
             score = SequenceMatcher(None, normalize_hotword(candidate), " ".join(hotword_parts)).ratio()
             if score >= threshold:
-                tokens[indexes[0]] = hotword
+                tokens[indexes[0]] = hotword.replacement
                 for index in indexes[1:]:
                     tokens[index] = ""
                 position += span_size
             else:
                 position += 1
 
-    return re.sub(r"\s+([,.;:!?])", r"\1", "".join(tokens)).strip()
+    normalized = re.sub(r"\s+", " ", "".join(tokens))
+    return re.sub(r"\s+([,.;:!?])", r"\1", normalized).strip()
 
 
 def normalize_hotword(value: str) -> str:

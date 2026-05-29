@@ -13,6 +13,14 @@ It is 100% AI slop, including this README, but it works.
 - Pastes the final transcript into the previously active app.
 - Supports custom hotkeys, trigger mode, model repo/file, and vocabulary hints.
 
+Vocabulary entries can be plain preferred spellings or explicit aliases:
+
+```text
+PreferredName
+CommonMishearing => PreferredName
+Another Variant -> PreferredName
+```
+
 The default model is optimized for German ASR and is a 600M parameter NeMo checkpoint. CPU inference on a Mac can be slow, especially on first run.
 
 ## macOS App
