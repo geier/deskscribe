@@ -38,6 +38,7 @@ python transcribe_mic.py --chunk-seconds 8
 python transcribe_mic.py --list-devices
 python transcribe_mic.py --input-device 0
 python transcribe_mic.py --min-rms 0
+python transcribe_mic.py --verbose
 ```
 
 `--device mps` is available, but `--device cpu` is the safest default for NeMo on macOS.
