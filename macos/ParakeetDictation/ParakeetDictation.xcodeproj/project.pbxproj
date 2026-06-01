@@ -16,6 +16,17 @@
 		A10000000000000000000007 /* DebugLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000018 /* DebugLog.swift */; };
 		A10000000000000000000008 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000019 /* AppSettings.swift */; };
 		A10000000000000000000009 /* PreferencesWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001A /* PreferencesWindowController.swift */; };
+		A1000000000000000000000A /* AppVariant.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001B /* AppVariant.swift */; };
+		B10000000000000000000001 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000011 /* main.swift */; };
+		B10000000000000000000002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000012 /* AppDelegate.swift */; };
+		B10000000000000000000003 /* AudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000013 /* AudioRecorder.swift */; };
+		B10000000000000000000004 /* HotKeyMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000014 /* HotKeyMonitor.swift */; };
+		B10000000000000000000005 /* TranscriptOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000015 /* TranscriptOverlay.swift */; };
+		B10000000000000000000006 /* WorkerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000016 /* WorkerManager.swift */; };
+		B10000000000000000000007 /* DebugLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000018 /* DebugLog.swift */; };
+		B10000000000000000000008 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000019 /* AppSettings.swift */; };
+		B10000000000000000000009 /* PreferencesWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001A /* PreferencesWindowController.swift */; };
+		B1000000000000000000000A /* AppVariant.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001B /* AppVariant.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -30,10 +41,19 @@
 		A10000000000000000000018 /* DebugLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLog.swift; sourceTree = "<group>"; };
 		A10000000000000000000019 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		A1000000000000000000001A /* PreferencesWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesWindowController.swift; sourceTree = "<group>"; };
+		A1000000000000000000001B /* AppVariant.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVariant.swift; sourceTree = "<group>"; };
+		B10000000000000000000010 /* DeskScribeONNX.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeskScribeONNX.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		A10000000000000000000020 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B10000000000000000000020 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -55,6 +75,7 @@
 			isa = PBXGroup;
 			children = (
 				A10000000000000000000010 /* DeskScribe.app */,
+				B10000000000000000000010 /* DeskScribeONNX.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -72,6 +93,7 @@
 				A10000000000000000000018 /* DebugLog.swift */,
 				A10000000000000000000019 /* AppSettings.swift */,
 				A1000000000000000000001A /* PreferencesWindowController.swift */,
+				A1000000000000000000001B /* AppVariant.swift */,
 			);
 			path = ParakeetDictation;
 			sourceTree = "<group>";
@@ -95,6 +117,22 @@
 			productReference = A10000000000000000000010 /* DeskScribe.app */;
 			productType = "com.apple.product-type.application";
 		};
+		B10000000000000000000040 /* DeskScribeONNX */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = B10000000000000000000061 /* Build configuration list for PBXNativeTarget "DeskScribeONNX" */;
+			buildPhases = (
+				B10000000000000000000041 /* Sources */,
+				B10000000000000000000020 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DeskScribeONNX;
+			productName = DeskScribeONNX;
+			productReference = B10000000000000000000010 /* DeskScribeONNX.app */;
+			productType = "com.apple.product-type.application";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -106,6 +144,9 @@
 				LastUpgradeCheck = 1530;
 				TargetAttributes = {
 					A10000000000000000000040 = {
+						CreatedOnToolsVersion = 15.3;
+					};
+					B10000000000000000000040 = {
 						CreatedOnToolsVersion = 15.3;
 					};
 				};
@@ -124,6 +165,7 @@
 			projectRoot = "";
 			targets = (
 				A10000000000000000000040 /* ParakeetDictation */,
+				B10000000000000000000040 /* DeskScribeONNX */,
 			);
 		};
 /* End PBXProject section */
@@ -142,6 +184,24 @@
 				A10000000000000000000007 /* DebugLog.swift in Sources */,
 				A10000000000000000000008 /* AppSettings.swift in Sources */,
 				A10000000000000000000009 /* PreferencesWindowController.swift in Sources */,
+				A1000000000000000000000A /* AppVariant.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B10000000000000000000041 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B10000000000000000000001 /* main.swift in Sources */,
+				B10000000000000000000002 /* AppDelegate.swift in Sources */,
+				B10000000000000000000003 /* AudioRecorder.swift in Sources */,
+				B10000000000000000000004 /* HotKeyMonitor.swift in Sources */,
+				B10000000000000000000005 /* TranscriptOverlay.swift in Sources */,
+				B10000000000000000000006 /* WorkerManager.swift in Sources */,
+				B10000000000000000000007 /* DebugLog.swift in Sources */,
+				B10000000000000000000008 /* AppSettings.swift in Sources */,
+				B10000000000000000000009 /* PreferencesWindowController.swift in Sources */,
+				B1000000000000000000000A /* AppVariant.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -266,6 +326,7 @@
 		A10000000000000000000072 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APP_DISPLAY_NAME = DeskScribe;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -288,6 +349,7 @@
 		A10000000000000000000073 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				APP_DISPLAY_NAME = DeskScribe;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -303,6 +365,54 @@
 				MARKETING_VERSION = 0.1;
 				PRODUCT_BUNDLE_IDENTIFIER = local.DeskScribe;
 				PRODUCT_NAME = DeskScribe;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		B10000000000000000000072 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APP_DISPLAY_NAME = "DeskScribe ONNX";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_LANGUAGE = en;
+				ENABLE_HARDENED_RUNTIME = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ParakeetDictation/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = local.DeskScribe.ONNX;
+				PRODUCT_NAME = DeskScribeONNX;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DESKSCRIBE_NATIVE_ONNX";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		B10000000000000000000073 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APP_DISPLAY_NAME = "DeskScribe ONNX";
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_LANGUAGE = en;
+				ENABLE_HARDENED_RUNTIME = NO;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ParakeetDictation/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1;
+				PRODUCT_BUNDLE_IDENTIFIER = local.DeskScribe.ONNX;
+				PRODUCT_NAME = DeskScribeONNX;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DESKSCRIBE_NATIVE_ONNX";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
@@ -324,6 +434,15 @@
 			buildConfigurations = (
 				A10000000000000000000072 /* Debug */,
 				A10000000000000000000073 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		B10000000000000000000061 /* Build configuration list for PBXNativeTarget "DeskScribeONNX" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B10000000000000000000072 /* Debug */,
+				B10000000000000000000073 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

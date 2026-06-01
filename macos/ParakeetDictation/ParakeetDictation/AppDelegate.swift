@@ -83,17 +83,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func setupMenu() {
-        if let image = NSImage(systemSymbolName: "mic.circle", accessibilityDescription: "DeskScribe") {
+        if let image = NSImage(systemSymbolName: "mic.circle", accessibilityDescription: AppVariant.displayName) {
             image.isTemplate = true
             statusItem.button?.image = image
         } else {
-            statusItem.button?.title = "DeskScribe"
+            statusItem.button?.title = AppVariant.displayName
         }
 
         let menu = NSMenu()
         statusMenuItem.isEnabled = false
         menu.addItem(statusMenuItem)
         menu.addItem(.separator())
+        menu.addItem(NSMenuItem(title: "About \(AppVariant.displayName)", action: #selector(showAbout), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Preferences...", action: #selector(openPreferences), keyEquivalent: ","))
         menu.addItem(NSMenuItem(title: "Check Permissions", action: #selector(checkPermissions), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Open Accessibility Settings", action: #selector(openAccessibilitySettings), keyEquivalent: ""))
@@ -132,7 +133,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func validRepoRoot(_ url: URL) -> URL? {
-        let workerPath = url.appendingPathComponent("asr_worker.py").path
+        let workerPath = url.appendingPathComponent(AppVariant.workerScriptName).path
         let pythonPath = url.appendingPathComponent(".venv/bin/python").path
         guard FileManager.default.fileExists(atPath: workerPath), FileManager.default.isExecutableFile(atPath: pythonPath) else {
             log.warning("invalid repo root candidate=\(url.path), worker exists=\(FileManager.default.fileExists(atPath: workerPath)), python executable=\(FileManager.default.isExecutableFile(atPath: pythonPath))")
@@ -225,7 +226,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard granted else {
                 self.log.error("microphone permission missing")
                 self.setStatus("Error: microphone permission needed")
-                self.overlay.show("Enable microphone permission for DeskScribe")
+                self.overlay.show("Enable microphone permission for \(AppVariant.displayName)")
                 self.overlay.hide(after: 2.0)
                 return
             }
@@ -511,6 +512,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func openDebugLog() {
         NSWorkspace.shared.open(log.url)
+    }
+
+    @objc private func showAbout() {
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
+        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
+        let bundleID = Bundle.main.bundleIdentifier ?? "unknown"
+
+        let alert = NSAlert()
+        alert.messageText = AppVariant.displayName
+        alert.informativeText = "Version: \(version) (\(build))\nBundle ID: \(bundleID)\nGitHub: \(AppVariant.githubURL.absoluteString)"
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "Open GitHub")
+        alert.addButton(withTitle: "OK")
+
+        NSApp.activate(ignoringOtherApps: true)
+        if alert.runModal() == .alertFirstButtonReturn {
+            NSWorkspace.shared.open(AppVariant.githubURL)
+        }
     }
 
     @objc private func openPreferences() {

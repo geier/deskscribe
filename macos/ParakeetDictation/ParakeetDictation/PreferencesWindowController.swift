@@ -30,7 +30,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-        window.title = "DeskScribe Preferences"
+        window.title = "\(AppVariant.displayName) Preferences"
         window.center()
         super.init(window: window)
         window.delegate = self
