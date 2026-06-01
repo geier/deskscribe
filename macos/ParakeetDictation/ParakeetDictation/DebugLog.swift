@@ -9,9 +9,9 @@ final class DebugLog {
 
     private init() {
         let directory = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Logs/DeskScribe", isDirectory: true)
+            .appendingPathComponent("Library/Logs/\(AppVariant.logDirectoryName)", isDirectory: true)
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        url = directory.appendingPathComponent("DeskScribe.log")
+        url = directory.appendingPathComponent(AppVariant.logFileName)
         info("--- app session started ---")
     }
 
@@ -40,13 +40,13 @@ final class DebugLog {
                     try handle.write(contentsOf: data)
                     try handle.close()
                 } catch {
-                    NSLog("DeskScribe log write failed: \(error.localizedDescription)")
+                    NSLog("\(AppVariant.displayName) log write failed: \(error.localizedDescription)")
                 }
             } else {
                 try? data.write(to: url)
             }
         }
 
-        NSLog("DeskScribe [\(level)] \(message)")
+        NSLog("\(AppVariant.displayName) [\(level)] \(message)")
     }
 }
