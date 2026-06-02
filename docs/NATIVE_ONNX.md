@@ -62,6 +62,17 @@ Optional transcription smoke test:
 
 ## Package Model For Download
 
+If the original `.nemo` checkpoint needs to be mirrored first, use:
+
+```bash
+.venv/bin/python scripts/hf_model_transfer.py \
+  --preset primeline-parakeet \
+  --target-repo geier/deskscribe-parakeet-primeline-onnx \
+  --create-repo
+```
+
+For other Parakeet checkpoints, either use another preset such as `nvidia-parakeet-tdt-0.6b-v3` or pass `--source-repo` and `--filename` explicitly. The script downloads exactly one file and uploads that same file to the target repo.
+
 ```bash
 .venv/bin/python scripts/package_onnx_model.py \
   --version v1 \
