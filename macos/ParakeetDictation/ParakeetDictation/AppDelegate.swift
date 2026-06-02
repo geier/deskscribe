@@ -38,12 +38,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupMenu()
 
 #if DESKSCRIBE_NATIVE_ONNX
+        #if DEBUG
         let repoRoot = resolveRepoRoot()
         if let repoRoot {
             log.info("development repo root: \(repoRoot.path)")
         } else {
             log.info("development repo root not found; native ONNX runtime will use installed model paths")
         }
+        #else
+        let repoRoot: URL? = nil
+        log.info("release native ONNX runtime will use installed model paths")
+        #endif
 #else
         guard let repoRoot = resolveRepoRoot() else {
             log.error("repo root not found")
