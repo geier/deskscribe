@@ -18,6 +18,7 @@
 		A10000000000000000000009 /* PreferencesWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001A /* PreferencesWindowController.swift */; };
 		A1000000000000000000000A /* AppVariant.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001B /* AppVariant.swift */; };
 		A1000000000000000000000B /* TranscriptionRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001C /* TranscriptionRuntime.swift */; };
+		A1000000000000000000000C /* DeskScribeIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000021 /* DeskScribeIcon.icns */; };
 		B1000000000000000000000C /* NativeONNXBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001E /* NativeONNXBridge.m */; };
 		B10000000000000000000001 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000011 /* main.swift */; };
 		B10000000000000000000002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000012 /* AppDelegate.swift */; };
@@ -30,6 +31,7 @@
 		B10000000000000000000009 /* PreferencesWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001A /* PreferencesWindowController.swift */; };
 		B1000000000000000000000A /* AppVariant.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001B /* AppVariant.swift */; };
 		B1000000000000000000000B /* TranscriptionRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001C /* TranscriptionRuntime.swift */; };
+		B1000000000000000000000D /* DeskScribeIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000021 /* DeskScribeIcon.icns */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -49,6 +51,7 @@
 		A1000000000000000000001D /* NativeONNXBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NativeONNXBridge.h; sourceTree = "<group>"; };
 		A1000000000000000000001E /* NativeONNXBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NativeONNXBridge.m; sourceTree = "<group>"; };
 		A1000000000000000000001F /* ParakeetDictation-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ParakeetDictation-Bridging-Header.h"; sourceTree = "<group>"; };
+		A10000000000000000000021 /* DeskScribeIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = Resources/DeskScribeIcon.icns; sourceTree = "<group>"; };
 		B10000000000000000000010 /* DeskScribeONNX.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeskScribeONNX.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -105,6 +108,7 @@
 				A1000000000000000000001D /* NativeONNXBridge.h */,
 				A1000000000000000000001E /* NativeONNXBridge.m */,
 				A1000000000000000000001F /* ParakeetDictation-Bridging-Header.h */,
+				A10000000000000000000021 /* DeskScribeIcon.icns */,
 			);
 			path = ParakeetDictation;
 			sourceTree = "<group>";
@@ -118,6 +122,7 @@
 			buildPhases = (
 				A10000000000000000000041 /* Sources */,
 				A10000000000000000000020 /* Frameworks */,
+				A10000000000000000000042 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -134,6 +139,7 @@
 			buildPhases = (
 				B10000000000000000000041 /* Sources */,
 				B10000000000000000000020 /* Frameworks */,
+				B10000000000000000000042 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -180,6 +186,25 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A10000000000000000000042 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A1000000000000000000000C /* DeskScribeIcon.icns in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B10000000000000000000042 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B1000000000000000000000D /* DeskScribeIcon.icns in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		A10000000000000000000041 /* Sources */ = {
