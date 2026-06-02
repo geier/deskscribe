@@ -32,6 +32,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var pendingPasteWorkItem: DispatchWorkItem?
     private var pendingPasteboardRestoreWorkItem: DispatchWorkItem?
     private var isCapturingHotKey = false
+    private var shouldSendReturnAfterPaste = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         log.info("application did finish launching")
@@ -92,6 +93,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 var handled = false
                 DispatchQueue.main.sync {
                     handled = self?.cancelDictation() ?? false
+                }
+                return handled
+            },
+            onReturn: { [weak self] in
+                if Thread.isMainThread {
+                    return self?.handleReturnDuringDictation() ?? false
+                }
+
+                var handled = false
+                DispatchQueue.main.sync {
+                    handled = self?.handleReturnDuringDictation() ?? false
                 }
                 return handled
             }
@@ -275,6 +287,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         finishRecording(reason: "hotkey released")
     }
 
+    private func handleReturnDuringDictation() -> Bool {
+        if isRecording {
+            shouldSendReturnAfterPaste = true
+            finishRecording(reason: "return pressed")
+            return true
+        }
+
+        if isTranscribing {
+            shouldSendReturnAfterPaste = true
+            return true
+        }
+
+        return false
+    }
+
     private func beginRecording(reason: String) {
         log.info("recording requested: \(reason)")
         guard !isRecording && !isTranscribing else { return }
@@ -305,7 +332,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self.recordingID = UUID()
                 self.lastPartialText = ""
                 self.log.info("recording started")
-                self.setStatus("Recording - Escape cancels")
+                self.setStatus("Recording - Return submits, Escape cancels")
                 self.overlay.show("Listening...")
                 if AppVariant.supportsPartialTranscription {
                     self.startPartialTranscription()
@@ -334,6 +361,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         guard let wavURL = audioRecorder.stop() else {
             log.warning("recording stop returned no WAV URL")
+            shouldSendReturnAfterPaste = false
             setStatus(readyStatusText())
             overlay.hide(after: 0.2)
             return
@@ -343,6 +371,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard duration >= 0.5 else {
             try? FileManager.default.removeItem(at: wavURL)
             log.warning("recording ignored because it was too short")
+            shouldSendReturnAfterPaste = false
             setStatus(readyStatusText())
             overlay.show(AppSettings.triggerMode == .hold ? "Hold to dictate" : "Press to dictate")
             overlay.hide(after: 1.0)
@@ -383,6 +412,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         pendingPasteWorkItem = nil
         pendingPasteboardRestoreWorkItem?.cancel()
         pendingPasteboardRestoreWorkItem = nil
+        shouldSendReturnAfterPaste = false
         partialTimer?.invalidate()
         partialTimer = nil
         recordingID = nil
@@ -519,15 +549,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
             guard !trimmed.isEmpty else {
                 log.warning("transcription was empty")
+                shouldSendReturnAfterPaste = false
                 overlay.show("No transcript")
                 overlay.hide(after: 1.2)
                 return
             }
 
             overlay.hide()
-            pasteIntoPreviousApp(trimmed)
+            let sendReturnAfterPaste = shouldSendReturnAfterPaste
+            shouldSendReturnAfterPaste = false
+            pasteIntoPreviousApp(trimmed, sendReturnAfterPaste: sendReturnAfterPaste)
 
         case .failure(let error):
+            shouldSendReturnAfterPaste = false
             log.error("transcription failed: \(error.localizedDescription)")
             setStatus("Error: \(error.localizedDescription)")
             overlay.show("Transcription failed")
@@ -535,9 +569,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
-    private func pasteIntoPreviousApp(_ text: String) {
+    private func pasteIntoPreviousApp(_ text: String, sendReturnAfterPaste: Bool) {
         guard accessibilityTrusted(prompt: true) else {
             log.error("paste blocked because accessibility permission is missing")
+            shouldSendReturnAfterPaste = false
             setStatus("Error: accessibility permission needed")
             return
         }
@@ -567,12 +602,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
 
             self.pendingPasteWorkItem = nil
+            let didPaste: Bool
             if Self.sendCommandV() {
                 self.log.info("paste shortcut sent")
+                didPaste = true
             } else if let previousApp = self.previousApp, Self.performAccessibilityPaste(in: previousApp) {
                 self.log.warning("paste completed via visible Accessibility menu fallback")
+                didPaste = true
             } else {
                 self.log.error("paste failed")
+                didPaste = false
+            }
+            if sendReturnAfterPaste && didPaste {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                    if Self.sendReturnKey() {
+                        self.log.info("return key sent after paste")
+                    } else {
+                        self.log.error("return key after paste failed")
+                    }
+                }
             }
             if shouldRestorePasteboard {
                 self.restorePasteboard(savedPasteboard, expectedChangeCount: transcriptChangeCount, transcriptText: text, after: 0.8)
@@ -770,6 +818,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         keyDown.post(tap: .cghidEventTap)
         keyUp.post(tap: .cghidEventTap)
         commandUp.post(tap: .cghidEventTap)
+        return true
+    }
+
+    private static func sendReturnKey() -> Bool {
+        guard let source = CGEventSource(stateID: .hidSystemState) else { return false }
+        let returnKeyCode = CGKeyCode(36)
+        let keyDown = CGEvent(keyboardEventSource: source, virtualKey: returnKeyCode, keyDown: true)
+        let keyUp = CGEvent(keyboardEventSource: source, virtualKey: returnKeyCode, keyDown: false)
+        guard let keyDown, let keyUp else { return false }
+
+        keyDown.post(tap: .cghidEventTap)
+        keyUp.post(tap: .cghidEventTap)
         return true
     }
 

@@ -5,17 +5,20 @@ final class HotKeyMonitor {
     private let onPress: () -> Void
     private let onRelease: () -> Void
     private let onEscape: () -> Bool
+    private let onReturn: () -> Bool
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var isPressed = false
     private var isEscapeCancelling = false
+    private var isReturnSubmitting = false
     private var hotKey: HotKeySettings
 
-    init(hotKey: HotKeySettings, onPress: @escaping () -> Void, onRelease: @escaping () -> Void, onEscape: @escaping () -> Bool) {
+    init(hotKey: HotKeySettings, onPress: @escaping () -> Void, onRelease: @escaping () -> Void, onEscape: @escaping () -> Bool, onReturn: @escaping () -> Bool) {
         self.hotKey = hotKey
         self.onPress = onPress
         self.onRelease = onRelease
         self.onEscape = onEscape
+        self.onReturn = onReturn
     }
 
     func updateHotKey(_ hotKey: HotKeySettings) {
@@ -27,6 +30,7 @@ final class HotKeyMonitor {
     func resetState() {
         isPressed = false
         isEscapeCancelling = false
+        isReturnSubmitting = false
     }
 
     func start() -> Bool {
@@ -78,6 +82,7 @@ final class HotKeyMonitor {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             isPressed = false
             isEscapeCancelling = false
+            isReturnSubmitting = false
             DebugLog.shared.warning("hotkey event tap disabled by system; resetting pressed state and re-enabling")
             if let eventTap {
                 CGEvent.tapEnable(tap: eventTap, enable: true)
@@ -96,6 +101,18 @@ final class HotKeyMonitor {
 
             if type == .keyUp, isEscapeCancelling {
                 isEscapeCancelling = false
+                return nil
+            }
+        }
+
+        if keyCode == 36 {
+            if type == .keyDown, onReturn() {
+                isReturnSubmitting = true
+                return nil
+            }
+
+            if type == .keyUp, isReturnSubmitting {
+                isReturnSubmitting = false
                 return nil
             }
         }
