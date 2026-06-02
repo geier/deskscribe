@@ -17,6 +17,8 @@
 		A10000000000000000000008 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000019 /* AppSettings.swift */; };
 		A10000000000000000000009 /* PreferencesWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001A /* PreferencesWindowController.swift */; };
 		A1000000000000000000000A /* AppVariant.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001B /* AppVariant.swift */; };
+		A1000000000000000000000B /* TranscriptionRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001C /* TranscriptionRuntime.swift */; };
+		B1000000000000000000000C /* NativeONNXBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001E /* NativeONNXBridge.m */; };
 		B10000000000000000000001 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000011 /* main.swift */; };
 		B10000000000000000000002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000012 /* AppDelegate.swift */; };
 		B10000000000000000000003 /* AudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000013 /* AudioRecorder.swift */; };
@@ -27,6 +29,7 @@
 		B10000000000000000000008 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000019 /* AppSettings.swift */; };
 		B10000000000000000000009 /* PreferencesWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001A /* PreferencesWindowController.swift */; };
 		B1000000000000000000000A /* AppVariant.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001B /* AppVariant.swift */; };
+		B1000000000000000000000B /* TranscriptionRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001C /* TranscriptionRuntime.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -42,6 +45,10 @@
 		A10000000000000000000019 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 		A1000000000000000000001A /* PreferencesWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreferencesWindowController.swift; sourceTree = "<group>"; };
 		A1000000000000000000001B /* AppVariant.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVariant.swift; sourceTree = "<group>"; };
+		A1000000000000000000001C /* TranscriptionRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionRuntime.swift; sourceTree = "<group>"; };
+		A1000000000000000000001D /* NativeONNXBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NativeONNXBridge.h; sourceTree = "<group>"; };
+		A1000000000000000000001E /* NativeONNXBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NativeONNXBridge.m; sourceTree = "<group>"; };
+		A1000000000000000000001F /* ParakeetDictation-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ParakeetDictation-Bridging-Header.h"; sourceTree = "<group>"; };
 		B10000000000000000000010 /* DeskScribeONNX.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeskScribeONNX.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -94,6 +101,10 @@
 				A10000000000000000000019 /* AppSettings.swift */,
 				A1000000000000000000001A /* PreferencesWindowController.swift */,
 				A1000000000000000000001B /* AppVariant.swift */,
+				A1000000000000000000001C /* TranscriptionRuntime.swift */,
+				A1000000000000000000001D /* NativeONNXBridge.h */,
+				A1000000000000000000001E /* NativeONNXBridge.m */,
+				A1000000000000000000001F /* ParakeetDictation-Bridging-Header.h */,
 			);
 			path = ParakeetDictation;
 			sourceTree = "<group>";
@@ -185,6 +196,7 @@
 				A10000000000000000000008 /* AppSettings.swift in Sources */,
 				A10000000000000000000009 /* PreferencesWindowController.swift in Sources */,
 				A1000000000000000000000A /* AppVariant.swift in Sources */,
+				A1000000000000000000000B /* TranscriptionRuntime.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -202,6 +214,8 @@
 				B10000000000000000000008 /* AppSettings.swift in Sources */,
 				B10000000000000000000009 /* PreferencesWindowController.swift in Sources */,
 				B1000000000000000000000A /* AppVariant.swift in Sources */,
+				B1000000000000000000000B /* TranscriptionRuntime.swift in Sources */,
+				B1000000000000000000000C /* NativeONNXBridge.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -384,11 +398,16 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
+					/opt/homebrew/opt/onnxruntime/lib,
 				);
+				HEADER_SEARCH_PATHS = /opt/homebrew/opt/onnxruntime/include;
+				LIBRARY_SEARCH_PATHS = /opt/homebrew/opt/onnxruntime/lib;
 				MARKETING_VERSION = 0.1;
+				OTHER_LDFLAGS = "-lonnxruntime";
 				PRODUCT_BUNDLE_IDENTIFIER = local.DeskScribe.ONNX;
 				PRODUCT_NAME = DeskScribeONNX;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DESKSCRIBE_NATIVE_ONNX";
+				SWIFT_OBJC_BRIDGING_HEADER = "ParakeetDictation/ParakeetDictation-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
@@ -408,11 +427,16 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
+					/opt/homebrew/opt/onnxruntime/lib,
 				);
+				HEADER_SEARCH_PATHS = /opt/homebrew/opt/onnxruntime/include;
+				LIBRARY_SEARCH_PATHS = /opt/homebrew/opt/onnxruntime/lib;
 				MARKETING_VERSION = 0.1;
+				OTHER_LDFLAGS = "-lonnxruntime";
 				PRODUCT_BUNDLE_IDENTIFIER = local.DeskScribe.ONNX;
 				PRODUCT_NAME = DeskScribeONNX;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DESKSCRIBE_NATIVE_ONNX";
+				SWIFT_OBJC_BRIDGING_HEADER = "ParakeetDictation/ParakeetDictation-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;

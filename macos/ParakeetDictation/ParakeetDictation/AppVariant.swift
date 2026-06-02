@@ -9,6 +9,10 @@ enum AppVariant {
     static let logFileName = "DeskScribeONNX.log"
     static let workerPort = 8766
     static let workerScriptName = "asr_worker_onnx.py"
+    static let supportsPartialTranscription = true
+    static let partialTranscriptionInterval = 2.0
+    static let partialTranscriptionInitialDelay = 1.4
+    static let partialTranscriptionMinimumDuration = 1.0
 
     static func workerArguments(host: String, port: Int, model: ModelSettings) -> [String] {
         [
@@ -24,6 +28,10 @@ enum AppVariant {
     static let logFileName = "DeskScribe.log"
     static let workerPort = 8765
     static let workerScriptName = "asr_worker.py"
+    static let supportsPartialTranscription = true
+    static let partialTranscriptionInterval = 2.0
+    static let partialTranscriptionInitialDelay = 1.4
+    static let partialTranscriptionMinimumDuration = 1.0
 
     static func workerArguments(host: String, port: Int, model: ModelSettings) -> [String] {
         [

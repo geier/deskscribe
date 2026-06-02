@@ -9,6 +9,7 @@ DEFAULT_MODEL_FILE = "2_95_WER.nemo"
 DEFAULT_OUTPUT_DIR = "models/parakeet-primeline-onnx"
 BASE_MODEL_REPO = "nvidia/parakeet-tdt-0.6b-v3"
 CC_BY_4_URL = "https://creativecommons.org/licenses/by/4.0/"
+MEL_FILTERBANK_FILE = "mel_fbanks_nemo128.bin"
 
 
 def parse_args() -> argparse.Namespace:
@@ -57,6 +58,21 @@ This converted package is not an official primeLine or NVIDIA release. Use of th
     print(f"Wrote {license_path}")
 
 
+def write_mel_filterbank(output_dir: Path) -> None:
+    from importlib.resources import files
+
+    import numpy as np
+    import onnx_asr.preprocessors
+
+    fbanks_path = files(onnx_asr.preprocessors).joinpath("data").joinpath("fbanks.npz")
+    with np.load(str(fbanks_path)) as data:
+        mel_fbanks = data["nemo128"].astype("<f4", copy=False)
+
+    output_path = output_dir / MEL_FILTERBANK_FILE
+    mel_fbanks.tofile(output_path)
+    print(f"Wrote {output_path} shape={mel_fbanks.shape} dtype=float32")
+
+
 def main() -> None:
     args = parse_args()
     output_dir = Path(args.output_dir).expanduser().resolve()
@@ -85,6 +101,8 @@ def main() -> None:
             handle.write(f"{token} {index}\n")
     print(f"Wrote {vocab_path}")
 
+    write_mel_filterbank(output_dir)
+
     config = {
         "model_type": "nemo-conformer-tdt",
         "model_repo": args.model_repo,
@@ -94,6 +112,12 @@ def main() -> None:
         "license_url": CC_BY_4_URL,
         "conversion": "nemo-to-onnx",
         "features_size": 128,
+        "mel_filterbank": {
+            "file": MEL_FILTERBANK_FILE,
+            "rows": 257,
+            "columns": 128,
+            "dtype": "float32_le",
+        },
         "subsampling_factor": 8,
         "max_tokens_per_step": 10,
     }
@@ -104,7 +128,14 @@ def main() -> None:
     print(f"Wrote {config_path}")
     write_model_license(output_dir, args.model_repo, args.model_file)
 
-    expected = ["encoder-model.onnx", "decoder_joint-model.onnx", "vocab.txt", "config.json", "MODEL_LICENSE.md"]
+    expected = [
+        "encoder-model.onnx",
+        "decoder_joint-model.onnx",
+        "vocab.txt",
+        "config.json",
+        "MODEL_LICENSE.md",
+        MEL_FILTERBANK_FILE,
+    ]
     missing = [name for name in expected if not (output_dir / name).exists()]
     if missing:
         raise RuntimeError(f"Export incomplete, missing: {', '.join(missing)}")
