@@ -33,6 +33,7 @@ enum AppSettings {
     static let defaultHotKey = HotKeySettings(keyCode: 49, modifiers: .maskAlternate)
     static let defaultTriggerMode = TriggerMode.toggle
     static let defaultVocabulary = VocabularySettings(words: [])
+    static let defaultRestorePasteboardAfterPaste = false
 
     private static let hotKeyKeyCodeKey = "hotKey.keyCode"
     private static let hotKeyModifiersKey = "hotKey.modifiers"
@@ -40,6 +41,7 @@ enum AppSettings {
     private static let modelRepoKey = "model.repo"
     private static let modelFileKey = "model.file"
     private static let vocabularyWordsKey = "vocabulary.words"
+    private static let restorePasteboardAfterPasteKey = "pasteboard.restoreAfterPaste"
 
     static var hotKey: HotKeySettings {
         get {
@@ -89,6 +91,18 @@ enum AppSettings {
         }
         set {
             UserDefaults.standard.set(normalizedVocabulary(newValue.words), forKey: vocabularyWordsKey)
+        }
+    }
+
+    static var restorePasteboardAfterPaste: Bool {
+        get {
+            if UserDefaults.standard.object(forKey: restorePasteboardAfterPasteKey) == nil {
+                return defaultRestorePasteboardAfterPaste
+            }
+            return UserDefaults.standard.bool(forKey: restorePasteboardAfterPasteKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: restorePasteboardAfterPasteKey)
         }
     }
 

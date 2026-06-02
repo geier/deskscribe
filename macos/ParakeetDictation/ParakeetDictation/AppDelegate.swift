@@ -14,7 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let overlay = TranscriptOverlay()
     private let audioRecorder = AudioRecorder()
 
-    private var worker: WorkerManager?
+    private var worker: TranscriptionRuntime?
     private var hotKeyMonitor: HotKeyMonitor?
     private var previousApp: NSRunningApplication?
     private var preferencesWindowController: PreferencesWindowController?
@@ -26,6 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var recordingID: UUID?
     private var partialTimer: Timer?
     private var partialRequestInFlight = false
+    private var partialRequestStartedAt: Date?
     private var lastPartialText = ""
     private var finalTranscriptionID: UUID?
     private var pendingPasteWorkItem: DispatchWorkItem?
@@ -36,17 +37,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         log.info("application did finish launching")
         setupMenu()
 
+#if DESKSCRIBE_NATIVE_ONNX
+        let repoRoot = resolveRepoRoot()
+        if let repoRoot {
+            log.info("development repo root: \(repoRoot.path)")
+        } else {
+            log.info("development repo root not found; native ONNX runtime will use installed model paths")
+        }
+#else
         guard let repoRoot = resolveRepoRoot() else {
             log.error("repo root not found")
             setStatus("Error: repo root not found")
             return
         }
         log.info("repo root: \(repoRoot.path)")
+#endif
 
-        let worker = WorkerManager(repoRoot: repoRoot, model: AppSettings.model)
+        let worker = TranscriptionRuntimeFactory.make(repoRoot: repoRoot, model: AppSettings.model)
         worker.onStateChange = { [weak self] state in
             DispatchQueue.main.async {
                 self?.handleWorkerState(state)
+            }
+        }
+        worker.onProgress = { [weak self] message in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.log.info("transcription progress: \(message)")
+                guard self.isTranscribing else {
+                    self.setStatus(message)
+                    return
+                }
+                if self.lastPartialText.isEmpty {
+                    self.overlay.show("Finishing...")
+                }
             }
         }
         self.worker = worker
@@ -78,6 +101,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         log.info("application will terminate")
         hotKeyRetryTimer?.invalidate()
         partialTimer?.invalidate()
+        pendingPasteWorkItem?.cancel()
+        pendingPasteWorkItem = nil
+        pendingPasteboardRestoreWorkItem?.cancel()
+        pendingPasteboardRestoreWorkItem = nil
+        worker?.cancelPendingTranscriptions()
+        if isRecording {
+            audioRecorder.cancel()
+        }
+        isRecording = false
+        isTranscribing = false
+        finalTranscriptionID = nil
+        recordingID = nil
+        recordingStartedAt = nil
+        partialRequestInFlight = false
+        partialRequestStartedAt = nil
+        Self.releaseSyntheticModifierKeys()
         worker?.stop()
         hotKeyMonitor?.stop()
     }
@@ -97,12 +136,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem(title: "About \(AppVariant.displayName)", action: #selector(showAbout), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Preferences...", action: #selector(openPreferences), keyEquivalent: ","))
         menu.addItem(NSMenuItem(title: "Check Permissions", action: #selector(checkPermissions), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Open Debug Log", action: #selector(openDebugLog), keyEquivalent: ""))
+
+        #if DEBUG
         menu.addItem(NSMenuItem(title: "Open Accessibility Settings", action: #selector(openAccessibilitySettings), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Open Microphone Settings", action: #selector(openMicrophoneSettings), keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "Open Debug Log", action: #selector(openDebugLog), keyEquivalent: ""))
         menu.addItem(.separator())
-        menu.addItem(NSMenuItem(title: "Restart Worker", action: #selector(restartWorker), keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "Restart Runtime", action: #selector(restartWorker), keyEquivalent: ""))
         menu.addItem(.separator())
+        #endif
+
         menu.addItem(NSMenuItem(title: "Quit", action: #selector(quit), keyEquivalent: "q"))
 
         for item in menu.items where item.action != nil {
@@ -114,7 +157,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func resolveRepoRoot() -> URL? {
         if let envPath = ProcessInfo.processInfo.environment["DESKSCRIBE_WORKER_ROOT"] {
             log.info("using DESKSCRIBE_WORKER_ROOT=\(envPath)")
-            return validRepoRoot(URL(fileURLWithPath: envPath))
+            if let repoRoot = validRepoRoot(URL(fileURLWithPath: envPath)) {
+                return repoRoot
+            }
         }
 
         if let bundledWorkerURL = Bundle.main.resourceURL?.appendingPathComponent("Worker") {
@@ -133,6 +178,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func validRepoRoot(_ url: URL) -> URL? {
+#if DESKSCRIBE_NATIVE_ONNX
+        let modelPackage = NativeONNXModelPackage(
+            directory: NativeONNXModelPackage.developmentDirectory(repoRoot: url)
+        )
+        do {
+            try modelPackage.validate()
+            return url
+        } catch {
+            log.warning("invalid repo root candidate=\(url.path), native ONNX model validation failed: \(error.localizedDescription)")
+            return nil
+        }
+#else
         let workerPath = url.appendingPathComponent(AppVariant.workerScriptName).path
         let pythonPath = url.appendingPathComponent(".venv/bin/python").path
         guard FileManager.default.fileExists(atPath: workerPath), FileManager.default.isExecutableFile(atPath: pythonPath) else {
@@ -140,6 +197,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return nil
         }
         return url
+#endif
     }
 
     private func handleWorkerState(_ state: WorkerState) {
@@ -183,13 +241,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func startHotKeyRetryTimer() {
         hotKeyRetryTimer?.invalidate()
-        hotKeyRetryTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: 2.0, repeats: true) { [weak self] _ in
             guard let self, !self.hotKeyActive, !self.isCapturingHotKey else { return }
             if self.accessibilityTrusted(prompt: false) {
                 self.log.info("accessibility is now trusted; retrying hotkey monitor")
                 self.startHotKeyMonitor(promptForAccessibility: false)
             }
         }
+        hotKeyRetryTimer = timer
+        RunLoop.main.add(timer, forMode: .common)
     }
 
     private func handleHotKeyPress() {
@@ -242,7 +302,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self.log.info("recording started")
                 self.setStatus("Recording - Escape cancels")
                 self.overlay.show("Listening...")
-                self.startPartialTranscription()
+                if AppVariant.supportsPartialTranscription {
+                    self.startPartialTranscription()
+                }
             } catch {
                 self.log.error("recording start failed: \(error.localizedDescription)")
                 self.setStatus("Error: \(error.localizedDescription)")
@@ -259,6 +321,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         partialTimer?.invalidate()
         partialTimer = nil
         recordingID = nil
+        partialRequestInFlight = false
+        partialRequestStartedAt = nil
+        worker?.cancelPendingTranscriptions()
         let duration = recordingStartedAt.map { Date().timeIntervalSince($0) } ?? 0
         recordingStartedAt = nil
 
@@ -283,11 +348,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let transcriptionID = UUID()
         finalTranscriptionID = transcriptionID
         setStatus("Transcribing")
-        overlay.show("Transcribing...")
+        if lastPartialText.isEmpty {
+            overlay.show("Finishing...")
+        }
 
-        worker?.transcribe(audioURL: wavURL, vocabulary: AppSettings.vocabulary) { [weak self] result in
+        let transcriptionStartedAt = Date()
+        worker?.transcribe(audioURL: wavURL, vocabulary: AppSettings.vocabulary, priority: .final) { [weak self] result in
             DispatchQueue.main.async {
                 try? FileManager.default.removeItem(at: wavURL)
+                self?.log.info("final transcription completed in \(Self.formatDuration(Date().timeIntervalSince(transcriptionStartedAt)))")
                 self?.handleTranscription(result, transcriptionID: transcriptionID)
             }
         }
@@ -302,6 +371,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         isRecording = false
         isTranscribing = false
         finalTranscriptionID = nil
+        partialRequestInFlight = false
+        partialRequestStartedAt = nil
+        worker?.cancelPendingTranscriptions()
         pendingPasteWorkItem?.cancel()
         pendingPasteWorkItem = nil
         pendingPasteboardRestoreWorkItem?.cancel()
@@ -328,52 +400,101 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         partialTimer?.invalidate()
         guard let recordingID else { return }
 
-        partialTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+        let timer = Timer(timeInterval: AppVariant.partialTranscriptionInterval, repeats: true) { [weak self] _ in
             self?.requestPartialTranscription(recordingID: recordingID)
         }
+        partialTimer = timer
+        RunLoop.main.add(timer, forMode: .common)
+        log.info("partial transcription timer started initialDelay=\(AppVariant.partialTranscriptionInitialDelay)s interval=\(AppVariant.partialTranscriptionInterval)s")
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) { [weak self] in
+        DispatchQueue.main.asyncAfter(deadline: .now() + AppVariant.partialTranscriptionInitialDelay) { [weak self] in
             self?.requestPartialTranscription(recordingID: recordingID)
         }
     }
 
     private func requestPartialTranscription(recordingID: UUID) {
-        guard isRecording,
-              self.recordingID == recordingID,
-              !partialRequestInFlight,
-              worker?.isReady == true else {
+        guard isRecording, self.recordingID == recordingID else {
+            return
+        }
+
+        if partialRequestInFlight {
+            let elapsed = partialRequestStartedAt.map { Date().timeIntervalSince($0) } ?? 0
+            if elapsed > 8.0 {
+                log.warning("partial transcription request timed out after \(Self.formatDuration(elapsed)); allowing next preview")
+                partialRequestInFlight = false
+                partialRequestStartedAt = nil
+            } else {
+                log.info("partial transcription skipped; previous request still in flight for \(Self.formatDuration(elapsed))")
+                return
+            }
+        }
+
+        guard worker?.isReady == true else {
+            log.info("partial transcription skipped; runtime not ready")
             return
         }
 
         let duration = recordingStartedAt.map { Date().timeIntervalSince($0) } ?? 0
-        guard duration >= 1.0, let snapshotURL = audioRecorder.snapshot() else { return }
+        guard duration >= AppVariant.partialTranscriptionMinimumDuration else { return }
 
         partialRequestInFlight = true
-        log.info("partial transcription request: \(snapshotURL.path), duration=\(String(format: "%.2f", duration))s")
+        let partialStartedAt = Date()
+        partialRequestStartedAt = partialStartedAt
 
-        worker?.transcribe(audioURL: snapshotURL, vocabulary: AppSettings.vocabulary) { [weak self] result in
+#if DESKSCRIBE_NATIVE_ONNX
+        guard let snapshotSamples = audioRecorder.snapshotSamples() else {
+            partialRequestInFlight = false
+            return
+        }
+        log.info("partial transcription request: in-memory samples=\(snapshotSamples.count), duration=\(String(format: "%.2f", duration))s")
+        worker?.transcribe(samples: snapshotSamples, vocabulary: AppSettings.vocabulary, priority: .partialPreview) { [weak self] result in
             DispatchQueue.main.async {
-                try? FileManager.default.removeItem(at: snapshotURL)
-                guard let self else { return }
-                self.partialRequestInFlight = false
-
-                guard self.isRecording, self.recordingID == recordingID else {
-                    self.log.info("ignored stale partial transcription result")
-                    return
-                }
-
-                switch result {
-                case .success(let text):
-                    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                    guard !trimmed.isEmpty, trimmed != self.lastPartialText else { return }
-                    self.lastPartialText = trimmed
-                    self.log.info("partial transcription update, characters=\(trimmed.count)")
-                    self.overlay.show(trimmed)
-                case .failure(let error):
-                    self.log.warning("partial transcription failed: \(error.localizedDescription)")
-                }
+                self?.handlePartialTranscriptionResult(result, recordingID: recordingID, startedAt: partialStartedAt)
             }
         }
+#else
+        guard let snapshotURL = audioRecorder.snapshot() else {
+            partialRequestInFlight = false
+            return
+        }
+        log.info("partial transcription request: \(snapshotURL.path), duration=\(String(format: "%.2f", duration))s")
+        worker?.transcribe(audioURL: snapshotURL, vocabulary: AppSettings.vocabulary, priority: .partialPreview) { [weak self] result in
+            DispatchQueue.main.async {
+                try? FileManager.default.removeItem(at: snapshotURL)
+                self?.handlePartialTranscriptionResult(result, recordingID: recordingID, startedAt: partialStartedAt)
+            }
+        }
+#endif
+    }
+
+    private func handlePartialTranscriptionResult(_ result: Result<String, Error>, recordingID: UUID, startedAt: Date) {
+        partialRequestInFlight = false
+        partialRequestStartedAt = nil
+        log.info("partial transcription completed in \(Self.formatDuration(Date().timeIntervalSince(startedAt)))")
+
+        guard isRecording, self.recordingID == recordingID else {
+            log.info("ignored stale partial transcription result")
+            return
+        }
+
+        switch result {
+        case .success(let text):
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty, trimmed != lastPartialText else { return }
+            lastPartialText = trimmed
+            log.info("partial transcription update, characters=\(trimmed.count)")
+            overlay.show(trimmed)
+        case .failure(let error):
+            if case NativeONNXRuntimeError.transcriptionCancelled = error {
+                log.info("partial transcription cancelled")
+                return
+            }
+            log.warning("partial transcription failed: \(error.localizedDescription)")
+        }
+    }
+
+    private static func formatDuration(_ seconds: TimeInterval) -> String {
+        String(format: "%.3fs", seconds)
     }
 
     private func handleTranscription(_ result: Result<String, Error>, transcriptionID: UUID) {
@@ -417,17 +538,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let pasteboard = NSPasteboard.general
-        let savedPasteboard = Self.savePasteboard(pasteboard)
+        let shouldRestorePasteboard = AppSettings.restorePasteboardAfterPaste
+        let savedPasteboard = shouldRestorePasteboard ? Self.savePasteboard(pasteboard) : []
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
         let transcriptChangeCount = pasteboard.changeCount
 
         log.info("pasting transcript into app: \(previousApp?.localizedName ?? "unknown")")
+        let shouldResumeHotKeyMonitor = hotKeyActive
+        suspendHotKeyMonitorForPaste()
         previousApp?.activate(options: [.activateIgnoringOtherApps])
         pendingPasteWorkItem?.cancel()
         pendingPasteboardRestoreWorkItem?.cancel()
         let pasteWorkItem = DispatchWorkItem { [weak self] in
             guard let self else { return }
+            defer {
+                Self.releaseSyntheticModifierKeys()
+                if shouldResumeHotKeyMonitor {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+                        self?.resumeHotKeyMonitorAfterPaste()
+                    }
+                }
+            }
+
             self.pendingPasteWorkItem = nil
             if Self.sendCommandV() {
                 self.log.info("paste shortcut sent")
@@ -436,7 +569,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             } else {
                 self.log.error("paste failed")
             }
-            self.restorePasteboard(savedPasteboard, expectedChangeCount: transcriptChangeCount, transcriptText: text, after: 0.8)
+            if shouldRestorePasteboard {
+                self.restorePasteboard(savedPasteboard, expectedChangeCount: transcriptChangeCount, transcriptText: text, after: 0.8)
+            } else {
+                self.log.info("pasteboard restore disabled; transcript remains on clipboard")
+            }
         }
         pendingPasteWorkItem = pasteWorkItem
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2, execute: pasteWorkItem)
@@ -535,8 +672,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func openPreferences() {
         if preferencesWindowController == nil {
             preferencesWindowController = PreferencesWindowController(
-                onSave: { [weak self] hotKey, triggerMode, model, vocabulary in
-                    self?.applyPreferences(hotKey: hotKey, triggerMode: triggerMode, model: model, vocabulary: vocabulary)
+                onSave: { [weak self] hotKey, triggerMode, model, vocabulary, restorePasteboard in
+                    self?.applyPreferences(hotKey: hotKey, triggerMode: triggerMode, model: model, vocabulary: vocabulary, restorePasteboard: restorePasteboard)
+                },
+                onCheckPermissions: { [weak self] in
+                    self?.checkPermissions()
                 },
                 onCaptureStarted: { [weak self] in
                     self?.suspendHotKeyMonitorForCapture()
@@ -564,8 +704,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         startHotKeyMonitor(promptForAccessibility: false)
     }
 
-    private func applyPreferences(hotKey: HotKeySettings, triggerMode: TriggerMode, model: ModelSettings, vocabulary: VocabularySettings) {
-        log.info("preferences saved hotkey=\(AppSettings.displayName(for: hotKey)) triggerMode=\(triggerMode.rawValue) model=\(model.repo) file=\(model.file) vocabulary=\(vocabulary.words.count)")
+    private func suspendHotKeyMonitorForPaste() {
+        guard hotKeyActive else { return }
+        log.info("suspending hotkey monitor for paste")
+        hotKeyMonitor?.stop()
+        hotKeyActive = false
+    }
+
+    private func resumeHotKeyMonitorAfterPaste() {
+        guard !isCapturingHotKey else { return }
+        log.info("resuming hotkey monitor after paste")
+        startHotKeyMonitor(promptForAccessibility: false)
+    }
+
+    private func applyPreferences(hotKey: HotKeySettings, triggerMode: TriggerMode, model: ModelSettings, vocabulary: VocabularySettings, restorePasteboard: Bool) {
+        log.info("preferences saved hotkey=\(AppSettings.displayName(for: hotKey)) triggerMode=\(triggerMode.rawValue) model=\(model.repo) file=\(model.file) vocabulary=\(vocabulary.words.count) restorePasteboard=\(restorePasteboard)")
         hotKeyMonitor?.updateHotKey(hotKey)
         startHotKeyMonitor(promptForAccessibility: true)
         worker?.updateModel(model)
@@ -596,16 +749,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard let keyCodeForV = keyCode(forCharacter: "v") else { return false }
         DebugLog.shared.info("sending paste shortcut using keyCode=\(keyCodeForV)")
 
+        let commandKeyCode = CGKeyCode(55)
+        let commandDown = CGEvent(keyboardEventSource: source, virtualKey: commandKeyCode, keyDown: true)
+        commandDown?.flags = .maskCommand
         let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCodeForV, keyDown: true)
         keyDown?.flags = .maskCommand
         let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCodeForV, keyDown: false)
         keyUp?.flags = .maskCommand
+        let commandUp = CGEvent(keyboardEventSource: source, virtualKey: commandKeyCode, keyDown: false)
+        commandUp?.flags = []
 
-        guard let keyDown, let keyUp else { return false }
+        guard let commandDown, let keyDown, let keyUp, let commandUp else { return false }
 
+        commandDown.post(tap: .cghidEventTap)
         keyDown.post(tap: .cghidEventTap)
         keyUp.post(tap: .cghidEventTap)
+        commandUp.post(tap: .cghidEventTap)
         return true
+    }
+
+    private static func releaseSyntheticModifierKeys() {
+        guard let source = CGEventSource(stateID: .hidSystemState) else { return }
+        let modifierKeyCodes: [CGKeyCode] = [55, 54, 58, 61, 59, 62, 56, 60]
+        DebugLog.shared.info("releasing synthetic modifier keys")
+        for keyCode in modifierKeyCodes {
+            let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false)
+            keyUp?.flags = []
+            keyUp?.post(tap: .cghidEventTap)
+        }
     }
 
     private static func savePasteboard(_ pasteboard: NSPasteboard) -> [SavedPasteboardItem] {

@@ -6,7 +6,7 @@ enum WorkerState {
     case failed(String)
 }
 
-final class WorkerManager {
+final class WorkerManager: TranscriptionRuntime {
     private let repoRoot: URL
     private var model: ModelSettings
     private let host = "127.0.0.1"
@@ -16,6 +16,7 @@ final class WorkerManager {
     private var pollTimer: Timer?
 
     var onStateChange: ((WorkerState) -> Void)?
+    var onProgress: ((String) -> Void)?
     private(set) var isReady = false
 
     private var baseURL: URL {
