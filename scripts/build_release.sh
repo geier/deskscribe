@@ -32,6 +32,7 @@ ZIP_PATH="$DIST_DIR/DeskScribe-$VERSION-macos.zip"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 CODE_SIGN_IDENTITY="${CODE_SIGN_IDENTITY:--}"
 SKIP_PIP_INSTALL="${SKIP_PIP_INSTALL:-0}"
+BUILD_VERSION="${BUILD_VERSION:-$(git -C "$ROOT_DIR" rev-parse --short=12 HEAD 2>/dev/null || printf unknown)}"
 
 XCODEBUILD_ARGS=(
   -project "$ROOT_DIR/macos/ParakeetDictation/ParakeetDictation.xcodeproj"
@@ -41,6 +42,7 @@ XCODEBUILD_ARGS=(
   CODE_SIGN_STYLE=Manual
   CODE_SIGN_IDENTITY="$CODE_SIGN_IDENTITY"
   MARKETING_VERSION="$VERSION"
+  CURRENT_PROJECT_VERSION="$BUILD_VERSION"
   build
 )
 
@@ -79,5 +81,6 @@ ditto -c -k --keepParent "$APP_NAME" "$ZIP_PATH"
 shasum -a 256 "$ZIP_PATH" > "$ZIP_PATH.sha256"
 popd >/dev/null
 
+echo "Build version: $BUILD_VERSION"
 echo "Built $ZIP_PATH"
 cat "$ZIP_PATH.sha256"

@@ -33,6 +33,13 @@ final class AudioRecorder {
         return writeWav(samples: state.0, sourceSampleRate: state.1)
     }
 
+    func snapshotSamples() -> [Float]? {
+        let state = queue.sync { (samples, inputSampleRate) }
+        guard state.0.count > 0 else { return nil }
+        let resampled = resample(samples: state.0, sourceSampleRate: state.1)
+        return resampled.isEmpty ? nil : resampled
+    }
+
     func stop() -> URL? {
         engine?.inputNode.removeTap(onBus: 0)
         engine?.stop()

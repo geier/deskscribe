@@ -6,16 +6,17 @@ enum WorkerState {
     case failed(String)
 }
 
-final class WorkerManager {
+final class WorkerManager: TranscriptionRuntime {
     private let repoRoot: URL
     private var model: ModelSettings
     private let host = "127.0.0.1"
-    private let port = 8765
+    private let port = AppVariant.workerPort
     private var process: Process?
     private var outputPipe: Pipe?
     private var pollTimer: Timer?
 
     var onStateChange: ((WorkerState) -> Void)?
+    var onProgress: ((String) -> Void)?
     private(set) var isReady = false
 
     private var baseURL: URL {
@@ -116,7 +117,7 @@ final class WorkerManager {
 
     private func launchProcess() {
         let pythonURL = repoRoot.appendingPathComponent(".venv/bin/python")
-        let workerURL = repoRoot.appendingPathComponent("asr_worker.py")
+        let workerURL = repoRoot.appendingPathComponent(AppVariant.workerScriptName)
 
         guard FileManager.default.isExecutableFile(atPath: pythonURL.path) else {
             DebugLog.shared.error("missing python executable at \(pythonURL.path)")
@@ -125,7 +126,7 @@ final class WorkerManager {
         }
         guard FileManager.default.fileExists(atPath: workerURL.path) else {
             DebugLog.shared.error("missing worker at \(workerURL.path)")
-            onStateChange?(.failed("missing asr_worker.py"))
+            onStateChange?(.failed("missing \(AppVariant.workerScriptName)"))
             return
         }
 
@@ -139,16 +140,10 @@ final class WorkerManager {
             }
         }
 
-        DebugLog.shared.info("launching worker: \(pythonURL.path) \(workerURL.path) --host \(host) --port \(port) --model-repo \(model.repo) --model-file \(model.file)")
+        let workerArguments = AppVariant.workerArguments(host: host, port: port, model: model)
+        DebugLog.shared.info("launching worker: \(pythonURL.path) \(workerURL.path) \(workerArguments.joined(separator: " "))")
         process.executableURL = pythonURL
-        process.arguments = [
-            workerURL.path,
-            "--host", host,
-            "--port", String(port),
-            "--model-repo", model.repo,
-            "--model-file", model.file,
-            "--debug"
-        ]
+        process.arguments = [workerURL.path] + workerArguments
         process.currentDirectoryURL = repoRoot
         process.environment = ProcessInfo.processInfo.environment
         process.standardOutput = outputPipe

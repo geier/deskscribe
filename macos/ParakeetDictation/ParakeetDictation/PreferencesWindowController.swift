@@ -8,29 +8,36 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
     private let modelPresetPopup = NSPopUpButton()
     private let vocabularyTextView = NSTextView()
     private let vocabularyScrollView = NSScrollView()
+    private let vocabularyParseStatusLabel = NSTextField(labelWithString: "")
+    private let restorePasteboardCheckbox = NSButton(checkboxWithTitle: "Restore clipboard after pasting", target: nil, action: nil)
+    private var modelRepoRow: NSStackView?
+    private var modelFileRow: NSStackView?
     private var capturedHotKey = AppSettings.hotKey
     private var selectedTriggerMode = AppSettings.triggerMode
     private var captureMonitor: Any?
-    private let onSave: (HotKeySettings, TriggerMode, ModelSettings, VocabularySettings) -> Void
+    private let onSave: (HotKeySettings, TriggerMode, ModelSettings, VocabularySettings, Bool) -> Void
+    private let onCheckPermissions: () -> Void
     private let onCaptureStarted: () -> Void
     private let onCaptureEnded: () -> Void
 
     init(
-        onSave: @escaping (HotKeySettings, TriggerMode, ModelSettings, VocabularySettings) -> Void,
+        onSave: @escaping (HotKeySettings, TriggerMode, ModelSettings, VocabularySettings, Bool) -> Void,
+        onCheckPermissions: @escaping () -> Void,
         onCaptureStarted: @escaping () -> Void,
         onCaptureEnded: @escaping () -> Void
     ) {
         self.onSave = onSave
+        self.onCheckPermissions = onCheckPermissions
         self.onCaptureStarted = onCaptureStarted
         self.onCaptureEnded = onCaptureEnded
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 520, height: 440),
+            contentRect: NSRect(x: 0, y: 0, width: 520, height: 520),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
         )
-        window.title = "DeskScribe Preferences"
+        window.title = "\(AppVariant.displayName) Preferences"
         window.center()
         super.init(window: window)
         window.delegate = self
@@ -59,9 +66,12 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         stack.translatesAutoresizingMaskIntoConstraints = false
         contentView.addSubview(stack)
 
-        modelPresetPopup.addItems(withTitles: ["primeline/parakeet-primeline", "Custom"])
+        modelPresetPopup.addItems(withTitles: Self.modelPresetTitles)
         modelPresetPopup.target = self
         modelPresetPopup.action = #selector(modelPresetChanged)
+#if DESKSCRIBE_NATIVE_ONNX
+        modelPresetPopup.isEnabled = false
+#endif
 
         triggerModePopup.addItems(withTitles: TriggerMode.allCases.map(\.displayName))
         triggerModePopup.target = self
@@ -81,9 +91,20 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         stack.addArrangedSubview(row(label: "Hotkey", control: hotKeyButton))
         stack.addArrangedSubview(row(label: "Trigger", control: triggerModePopup))
         stack.addArrangedSubview(row(label: "Model", control: modelPresetPopup))
-        stack.addArrangedSubview(row(label: "Repo", control: modelRepoField))
-        stack.addArrangedSubview(row(label: "File", control: modelFileField))
-        stack.addArrangedSubview(row(label: "Vocabulary", control: vocabularyScrollView))
+#if !DESKSCRIBE_NATIVE_ONNX
+        let repoRow = row(label: "Repo", control: modelRepoField)
+        let fileRow = row(label: "File", control: modelFileField)
+        modelRepoRow = repoRow
+        modelFileRow = fileRow
+        stack.addArrangedSubview(repoRow)
+        stack.addArrangedSubview(fileRow)
+#endif
+        stack.addArrangedSubview(row(label: "Vocabulary", control: vocabularyControl()))
+        stack.addArrangedSubview(row(label: "Clipboard", control: restorePasteboardCheckbox))
+
+        let permissionsButton = NSButton(title: "Check Permissions", target: self, action: #selector(checkPermissions))
+        permissionsButton.bezelStyle = .rounded
+        stack.addArrangedSubview(row(label: "Permissions", control: permissionsButton))
 
         let buttons = NSStackView()
         buttons.orientation = .horizontal
@@ -109,6 +130,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         modelPresetPopup.widthAnchor.constraint(equalToConstant: 350).isActive = true
         vocabularyScrollView.widthAnchor.constraint(equalToConstant: 350).isActive = true
         vocabularyScrollView.heightAnchor.constraint(equalToConstant: 92).isActive = true
+        restorePasteboardCheckbox.widthAnchor.constraint(equalToConstant: 350).isActive = true
 
         NSLayoutConstraint.activate([
             stack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
@@ -139,7 +161,52 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         modelRepoField.stringValue = model.repo
         modelFileField.stringValue = model.file
         vocabularyTextView.string = vocabulary.words.joined(separator: "\n")
-        modelPresetPopup.selectItem(withTitle: model == AppSettings.defaultModel ? "primeline/parakeet-primeline" : "Custom")
+        restorePasteboardCheckbox.state = AppSettings.restorePasteboardAfterPaste ? .on : .off
+        modelPresetPopup.selectItem(withTitle: model == AppSettings.defaultModel ? Self.defaultModelTitle : "Custom")
+        updateModelFieldsVisibility()
+    }
+
+    private static var defaultModelTitle: String {
+#if DESKSCRIBE_NATIVE_ONNX
+        "DeskScribe ONNX default"
+#else
+        "primeline/parakeet-primeline"
+#endif
+    }
+
+    private static var modelPresetTitles: [String] {
+#if DESKSCRIBE_NATIVE_ONNX
+        [defaultModelTitle]
+#else
+        [defaultModelTitle, "Custom"]
+#endif
+    }
+
+    private func vocabularyControl() -> NSStackView {
+        let helpText = NSTextField(wrappingLabelWithString: "Optional pronunciation/spelling hints. Add one entry per line, for example: DeskScribe or desk scribe => DeskScribe")
+        helpText.textColor = .secondaryLabelColor
+        helpText.font = .systemFont(ofSize: 11)
+
+        let helpButton = NSButton(title: "Vocabulary Help", target: self, action: #selector(showVocabularyHelp))
+        helpButton.bezelStyle = .rounded
+
+        let testButton = NSButton(title: "Test Parsing", target: self, action: #selector(testVocabularyParsing))
+        testButton.bezelStyle = .rounded
+
+        let buttons = NSStackView(views: [testButton, helpButton, vocabularyParseStatusLabel])
+        buttons.orientation = .horizontal
+        buttons.alignment = .centerY
+        buttons.spacing = 8
+
+        vocabularyParseStatusLabel.textColor = .secondaryLabelColor
+        vocabularyParseStatusLabel.font = .systemFont(ofSize: 11)
+
+        let stack = NSStackView(views: [vocabularyScrollView, helpText, buttons])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 6
+        helpText.widthAnchor.constraint(equalToConstant: 350).isActive = true
+        return stack
     }
 
     @objc private func captureHotKey() {
@@ -165,15 +232,106 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
     }
 
     @objc private func modelPresetChanged() {
-        if modelPresetPopup.titleOfSelectedItem == "primeline/parakeet-primeline" {
+        if modelPresetPopup.titleOfSelectedItem == Self.defaultModelTitle {
             modelRepoField.stringValue = AppSettings.defaultModel.repo
             modelFileField.stringValue = AppSettings.defaultModel.file
         }
+        updateModelFieldsVisibility()
+    }
+
+    private func updateModelFieldsVisibility() {
+        let isCustom = modelPresetPopup.titleOfSelectedItem == "Custom"
+        modelRepoRow?.isHidden = !isCustom
+        modelFileRow?.isHidden = !isCustom
+        modelRepoField.isEditable = isCustom
+        modelFileField.isEditable = isCustom
     }
 
     @objc private func triggerModeChanged() {
         let title = triggerModePopup.titleOfSelectedItem ?? ""
         selectedTriggerMode = TriggerMode.allCases.first { $0.displayName == title } ?? AppSettings.defaultTriggerMode
+    }
+
+    @objc private func checkPermissions() {
+        onCheckPermissions()
+    }
+
+    @objc private func showVocabularyHelp() {
+        let alert = NSAlert()
+        alert.messageText = "Vocabulary Hints"
+        alert.informativeText = "Use this for product names, people, acronyms, or words the recognizer often misspells.\n\nOne entry per line:\nPreferred spelling\nmisheard phrase => preferred spelling\nother variant -> preferred spelling\n\nExamples:\nDeskScribe\ndesk scribe => DeskScribe\npost grass -> Postgres"
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+    }
+
+    @objc private func testVocabularyParsing() {
+        let result = vocabularyParseResult()
+        let issues = result.issues
+        highlightVocabularyIssues(issues)
+        if issues.isEmpty {
+            vocabularyParseStatusLabel.stringValue = "\(result.accepted.count) accepted"
+            vocabularyParseStatusLabel.textColor = .systemGreen
+        } else {
+            vocabularyParseStatusLabel.stringValue = "\(issues.count) broken line\(issues.count == 1 ? "" : "s")"
+            vocabularyParseStatusLabel.textColor = .systemRed
+        }
+
+        let alert = NSAlert()
+        alert.messageText = issues.isEmpty ? "Vocabulary Parsing Passed" : "Vocabulary Parsing Found Issues"
+        let acceptedText = result.accepted.isEmpty ? "No vocabulary entries." : result.accepted.joined(separator: "\n")
+        alert.informativeText = "Accepted entries:\n\(acceptedText)"
+        alert.alertStyle = issues.isEmpty ? .informational : .warning
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
+    }
+
+    private func vocabularyParseResult() -> (accepted: [String], issues: [NSRange]) {
+        let text = vocabularyTextView.string as NSString
+        var issues: [NSRange] = []
+        var accepted: [String] = []
+        var offset = 0
+
+        for rawLine in vocabularyTextView.string.components(separatedBy: .newlines) {
+            let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
+            let lineRange = text.lineRange(for: NSRange(location: offset, length: min(rawLine.count, text.length - offset)))
+            offset += rawLine.count + 1
+
+            guard !line.isEmpty else { continue }
+            let separator: String?
+            if line.contains("=>") {
+                separator = "=>"
+            } else if line.contains("->") {
+                separator = "->"
+            } else {
+                separator = nil
+            }
+
+            guard let separator else {
+                accepted.append(line)
+                continue
+            }
+            let parts = line.components(separatedBy: separator)
+            if parts.count != 2 || parts[0].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || parts[1].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                issues.append(lineRange)
+            } else {
+                accepted.append("\(parts[0].trimmingCharacters(in: .whitespacesAndNewlines)) -> \(parts[1].trimmingCharacters(in: .whitespacesAndNewlines))")
+            }
+        }
+
+        return (accepted, issues)
+    }
+
+    private func highlightVocabularyIssues(_ issues: [NSRange]) {
+        let fullRange = NSRange(location: 0, length: (vocabularyTextView.string as NSString).length)
+        vocabularyTextView.textStorage?.removeAttribute(.foregroundColor, range: fullRange)
+        vocabularyTextView.textStorage?.removeAttribute(.backgroundColor, range: fullRange)
+        vocabularyTextView.textStorage?.addAttribute(.foregroundColor, value: NSColor.textColor, range: fullRange)
+
+        for range in issues {
+            vocabularyTextView.textStorage?.addAttribute(.foregroundColor, value: NSColor.systemRed, range: range)
+            vocabularyTextView.textStorage?.addAttribute(.backgroundColor, value: NSColor.systemRed.withAlphaComponent(0.12), range: range)
+        }
     }
 
     @objc private func resetDefaults() {
@@ -184,7 +342,9 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         modelRepoField.stringValue = AppSettings.defaultModel.repo
         modelFileField.stringValue = AppSettings.defaultModel.file
         vocabularyTextView.string = AppSettings.defaultVocabulary.words.joined(separator: "\n")
-        modelPresetPopup.selectItem(withTitle: "primeline/parakeet-primeline")
+        restorePasteboardCheckbox.state = AppSettings.defaultRestorePasteboardAfterPaste ? .on : .off
+        modelPresetPopup.selectItem(withTitle: Self.defaultModelTitle)
+        updateModelFieldsVisibility()
     }
 
     @objc private func cancel() {
@@ -193,10 +353,15 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
     }
 
     @objc private func save() {
-        let model = ModelSettings(
-            repo: modelRepoField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines),
-            file: modelFileField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
-        )
+        let model: ModelSettings
+        if modelPresetPopup.titleOfSelectedItem == "Custom" {
+            model = ModelSettings(
+                repo: modelRepoField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines),
+                file: modelFileField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
+        } else {
+            model = AppSettings.defaultModel
+        }
         let vocabulary = VocabularySettings(
             words: AppSettings.normalizedVocabulary(vocabularyTextView.string.components(separatedBy: .newlines))
         )
@@ -206,8 +371,9 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         AppSettings.triggerMode = selectedTriggerMode
         AppSettings.model = model
         AppSettings.vocabulary = vocabulary
+        AppSettings.restorePasteboardAfterPaste = restorePasteboardCheckbox.state == .on
         endCapture()
-        onSave(capturedHotKey, selectedTriggerMode, model, vocabulary)
+        onSave(capturedHotKey, selectedTriggerMode, model, vocabulary, AppSettings.restorePasteboardAfterPaste)
         window?.orderOut(nil)
     }
 
