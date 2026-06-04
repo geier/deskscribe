@@ -6,10 +6,6 @@
 - Fix any preprocessing, tensor shape, or TDT decoding differences found by future fixture comparisons. (The initial fixture currently matches.)
 - Continue native performance work; preprocessing uses Accelerate and decoder buffer reuse is in place, and the encoder path is the main remaining cost.
 
-## Model Distribution
-
-- Add richer first-run UI for model download state, failures, and retry guidance. (Status-menu progress, first-run overlay, failure alert, and retry-on-failure menu item exist; richer Preferences UI is still pending.)
-
 ## Future Model Types
 
 - Benchmark Moonshine tiny/base through `sherpa-onnx` on DeskScribe WAV fixtures.
@@ -20,13 +16,12 @@
 
 ## App Packaging
 
-- Add first-run UI/status for model download progress and failures. (Status menu progress, first-run overlay, and failure alert are implemented; richer Preferences UI still pending.)
+- Add richer Preferences UI for model download state, failures, and retry controls.
 
 ## Settings UX
 
 - Add richer Model pane controls for runtime/model download state and model update/retry controls.
 - Add retention settings for transcript history.
-- Preserve the current native ONNX simplification where repository/file fields are hidden unless a Python custom model is relevant.
 
 ## Vocabulary Management
 
@@ -48,10 +43,8 @@
 
 ## Launch At Login
 
-- Test launch-at-login behavior for both `DeskScribe` and `DeskScribe ONNX` bundle identifiers.
+- Test launch-at-login behavior for the native ONNX app bundle after release installation.
 
 ## Cleanup
 
-- Remove `asr_worker_onnx.py` after native quality and performance are accepted.
-- Update README once native ONNX becomes the default runtime.
 - Keep `docs/NATIVE_ONNX.md` current until the migration is complete.

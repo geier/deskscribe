@@ -4,15 +4,15 @@ cask "deskscribe" do
 
   url "https://github.com/geier/deskscribe/releases/download/v#{version}/DeskScribe-#{version}-macos.zip"
   name "DeskScribe"
-  desc "Menu bar dictation app using local NeMo ASR"
+  desc "Menu bar dictation app using local native ONNX ASR"
   homepage "https://github.com/geier/deskscribe"
 
   depends_on macos: ">= :ventura"
 
-  app "DeskScribe.app"
+  app "DeskScribe ONNX.app"
 
   caveats <<~EOS
-    DeskScribe runs local speech recognition and may download the NeMo model
+    DeskScribe runs local speech recognition and may download the ONNX model
     on first use. Grant Microphone and Accessibility permissions when prompted.
   EOS
 end

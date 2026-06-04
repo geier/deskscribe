@@ -1,7 +1,6 @@
 import AppKit
 import Foundation
 
-#if DESKSCRIBE_NATIVE_ONNX
 private struct NativeONNXSmokeTestResult: Encodable {
     let path: String
     let text: String?
@@ -105,16 +104,10 @@ private func runNativeONNXSmokeTest(arguments: [String]) -> Int32 {
 
     return results.contains { $0.error != nil } ? 1 : 0
 }
-#endif
 
 let arguments = Array(CommandLine.arguments.dropFirst())
 if arguments.contains("--native-onnx-smoke-test") {
-#if DESKSCRIBE_NATIVE_ONNX
     exit(runNativeONNXSmokeTest(arguments: arguments))
-#else
-    fputs("--native-onnx-smoke-test is only available in the native ONNX build.\n", stderr)
-    exit(2)
-#endif
 }
 
 let app = NSApplication.shared
