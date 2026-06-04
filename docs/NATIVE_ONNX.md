@@ -60,6 +60,47 @@ Optional transcription smoke test:
 .venv/bin/python scripts/validate_onnx_export.py models/parakeet-primeline-onnx --audio /path/to/audio.wav
 ```
 
+Shared WAV fixture baseline:
+
+```bash
+.venv/bin/python scripts/validate_onnx_export.py \
+  models/parakeet-primeline-onnx \
+  --fixtures docs/onnx-fixtures.example.json
+```
+
+To generate a baseline manifest from one or more audio files:
+
+```bash
+.venv/bin/python scripts/validate_onnx_export.py \
+  models/parakeet-primeline-onnx \
+  --audio /path/to/audio.wav \
+  --write-results /tmp/deskscribe-onnx-fixtures.json
+```
+
+The fixture manifest stores `onnx-asr` output as the expected text. The native runtime should use the same WAV fixtures for accuracy comparisons once a native CLI/smoke-test entry point exists.
+
+Native ONNX smoke test from the built app executable:
+
+```bash
+/path/to/DeskScribeONNX.app/Contents/MacOS/DeskScribeONNX \
+  --repo-root /path/to/deskscribe \
+  --native-onnx-smoke-test /path/to/audio.wav
+```
+
+The command prints JSON results to stdout and runtime progress to stderr. `--native-onnx-smoke-test` can be passed more than once to transcribe multiple shared WAV fixtures.
+
+Native-vs-`onnx-asr` comparison harness:
+
+```bash
+scripts/compare_native_onnx.py \
+  models/parakeet-primeline-onnx \
+  --fixtures docs/onnx-fixtures.example.json \
+  --native-app /path/to/DeskScribeONNX.app \
+  --repo-root /path/to/deskscribe
+```
+
+The comparison script runs `onnx-asr` and the native smoke-test CLI on the same WAV files, prints per-fixture output, and exits non-zero on transcript differences or native errors.
+
 ## Package Model For Download
 
 If the original `.nemo` checkpoint needs to be mirrored first, use:

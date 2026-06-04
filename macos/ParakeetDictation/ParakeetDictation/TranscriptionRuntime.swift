@@ -731,7 +731,8 @@ enum NativeONNXDecoder {
 
         var state1 = zeroState(shape: bridge.decoderState1Shape)
         var state2 = zeroState(shape: bridge.decoderState2Shape)
-        var frame = Array(repeating: Float(0), count: encoderDim)
+        let frameData = NSMutableData(length: encoderDim * MemoryLayout<Float>.size) ?? NSMutableData()
+        let frameValues = frameData.mutableBytes.bindMemory(to: Float.self, capacity: encoderDim)
         var tokens: [Int] = []
         var emittedTokens = 0
         var time = 0
@@ -739,33 +740,33 @@ enum NativeONNXDecoder {
 
         while time < limit {
             for dim in 0..<encoderDim {
-                frame[dim] = encoderValues[dim * timeSteps + time]
+                frameValues[dim] = encoderValues[dim * timeSteps + time]
             }
-            let frameData = frame.withUnsafeBufferPointer { Data(buffer: $0) }
             var nextState1: NSData?
             var nextState2: NSData?
             let target = Int64(tokens.last ?? vocabulary.blankID)
             let logitsData = try bridge.runDecoder(
-                withEncoderFrame: frameData,
+                withEncoderFrame: frameData as Data,
                 target: target,
                 state1: state1 as Data,
                 state2: state2 as Data,
                 outputState1: &nextState1,
                 outputState2: &nextState2
             )
-            let logits = logitsData.withUnsafeBytes { buffer in
-                Array(buffer.bindMemory(to: Float.self))
-            }
-            guard logits.count > vocabulary.tokens.count else {
+            let tokenCount = vocabulary.tokens.count
+            let logitCount = logitsData.count / MemoryLayout<Float>.size
+            guard logitCount > tokenCount else {
                 throw NativeONNXRuntimeError.invalidDecoderOutput
             }
 
-            let tokenLogits = logits[0..<vocabulary.tokens.count]
-            let stepLogits = logits[vocabulary.tokens.count..<logits.count]
-            let token = argmax(tokenLogits)
-            let step = argmax(stepLogits)
+            let (token, tokenScore, step, stepScore) = logitsData.withUnsafeBytes { buffer in
+                let logits = buffer.bindMemory(to: Float.self)
+                let tokenResult = argmax(logits, start: 0, count: tokenCount)
+                let stepResult = argmax(logits, start: tokenCount, count: logitCount - tokenCount)
+                return (tokenResult.index, tokenResult.value, stepResult.index, stepResult.value)
+            }
             if time < 5 {
-                DebugLog.shared.info("native ONNX decode step time=\(time) token=\(token) blank=\(vocabulary.blankID) tokenScore=\(String(format: "%.3f", tokenLogits[tokenLogits.startIndex + token])) step=\(step) stepScore=\(String(format: "%.3f", stepLogits[stepLogits.startIndex + step]))")
+                DebugLog.shared.info("native ONNX decode step time=\(time) token=\(token) blank=\(vocabulary.blankID) tokenScore=\(String(format: "%.3f", tokenScore)) step=\(step) stepScore=\(String(format: "%.3f", stepScore))")
             }
             if token != vocabulary.blankID {
                 tokens.append(token)
@@ -794,14 +795,16 @@ enum NativeONNXDecoder {
         return NSMutableData(length: count * MemoryLayout<Float>.size) ?? NSData()
     }
 
-    private static func argmax(_ values: ArraySlice<Float>) -> Int {
-        var bestOffset = 0
+    private static func argmax(_ values: UnsafeBufferPointer<Float>, start: Int, count: Int) -> (index: Int, value: Float) {
+        var bestIndex = 0
         var bestValue = -Float.infinity
-        for (offset, value) in values.enumerated() where value > bestValue {
-            bestOffset = offset
+        for offset in 0..<count {
+            let value = values[start + offset]
+            guard value > bestValue else { continue }
+            bestIndex = offset
             bestValue = value
         }
-        return bestOffset
+        return (bestIndex, bestValue)
     }
 
     private static func decodeTokens(_ tokenIDs: [Int], vocabulary: NativeONNXVocabulary) -> String {
