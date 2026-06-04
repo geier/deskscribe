@@ -20,7 +20,6 @@
 
 ## App Packaging
 
-- Update release packaging so the Brew cask installs only the app, not the model.
 - Add first-run UI/status for model download progress and failures. (Status menu progress, first-run overlay, and failure alert are implemented; richer Preferences UI still pending.)
 
 ## Settings UX
