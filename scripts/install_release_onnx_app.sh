@@ -10,6 +10,11 @@ if [[ ! -d "$SOURCE_APP" ]]; then
   exit 1
 fi
 
+if pgrep -x DeskScribeONNX >/dev/null; then
+  echo "DeskScribe ONNX is running. Quit it before installing over $TARGET_APP." >&2
+  exit 1
+fi
+
 rm -rf "$TARGET_APP"
 ditto "$SOURCE_APP" "$TARGET_APP"
 /System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister -f -R -trusted "$TARGET_APP"
