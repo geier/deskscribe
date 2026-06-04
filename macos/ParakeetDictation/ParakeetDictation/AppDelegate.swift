@@ -205,8 +205,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func validRepoRoot(_ url: URL) -> URL? {
 #if DESKSCRIBE_NATIVE_ONNX
+        let preset = NativeONNXModelPresets.preset(for: AppSettings.model)
         let modelPackage = NativeONNXModelPackage(
-            directory: NativeONNXModelPackage.developmentDirectory(repoRoot: url)
+            preset: preset,
+            directory: NativeONNXModelPackage.developmentDirectory(repoRoot: url, for: preset)
         )
         do {
             try modelPackage.validate()
