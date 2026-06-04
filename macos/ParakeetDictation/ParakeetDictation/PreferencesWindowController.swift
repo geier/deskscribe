@@ -229,9 +229,6 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         modelPresetPopup.addItems(withTitles: Self.modelPresetTitles)
         modelPresetPopup.target = self
         modelPresetPopup.action = #selector(modelPresetChanged)
-#if DESKSCRIBE_NATIVE_ONNX
-        modelPresetPopup.isEnabled = false
-#endif
 
         stack.addArrangedSubview(row(label: "Model", control: modelPresetPopup))
 #if !DESKSCRIBE_NATIVE_ONNX
@@ -378,14 +375,14 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         vocabularyTableView.reloadData()
         updateVocabularyStatus()
         loadLaunchAtLoginState()
-        modelPresetPopup.selectItem(withTitle: model == AppSettings.defaultModel ? Self.defaultModelTitle : "Custom")
+        modelPresetPopup.selectItem(withTitle: Self.title(for: model))
         updateModelFieldsVisibility()
         refreshHistory()
     }
 
     private static var defaultModelTitle: String {
 #if DESKSCRIBE_NATIVE_ONNX
-        "DeskScribe ONNX default"
+        NativeONNXModelPresets.defaultPreset.title
 #else
         "primeline/parakeet-primeline"
 #endif
@@ -393,9 +390,17 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
 
     private static var modelPresetTitles: [String] {
 #if DESKSCRIBE_NATIVE_ONNX
-        [defaultModelTitle]
+        NativeONNXModelPresets.all.map(\.title)
 #else
         [defaultModelTitle, "Custom"]
+#endif
+    }
+
+    private static func title(for model: ModelSettings) -> String {
+#if DESKSCRIBE_NATIVE_ONNX
+        NativeONNXModelPresets.preset(for: model).title
+#else
+        model == AppSettings.defaultModel ? defaultModelTitle : "Custom"
 #endif
     }
 
@@ -565,10 +570,17 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
     }
 
     @objc private func modelPresetChanged() {
+#if DESKSCRIBE_NATIVE_ONNX
+        if let preset = NativeONNXModelPresets.preset(titled: modelPresetPopup.titleOfSelectedItem) {
+            modelRepoField.stringValue = preset.settings.repo
+            modelFileField.stringValue = preset.settings.file
+        }
+#else
         if modelPresetPopup.titleOfSelectedItem == Self.defaultModelTitle {
             modelRepoField.stringValue = AppSettings.defaultModel.repo
             modelFileField.stringValue = AppSettings.defaultModel.file
         }
+#endif
         updateModelFieldsVisibility()
     }
 
@@ -615,6 +627,9 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         let previousModel = AppSettings.model
 
         let model: ModelSettings
+#if DESKSCRIBE_NATIVE_ONNX
+        model = NativeONNXModelPresets.preset(titled: modelPresetPopup.titleOfSelectedItem)?.settings ?? AppSettings.defaultModel
+#else
         if modelPresetPopup.titleOfSelectedItem == "Custom" {
             model = ModelSettings(
                 repo: modelRepoField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines),
@@ -623,6 +638,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         } else {
             model = AppSettings.defaultModel
         }
+#endif
         guard !model.repo.isEmpty, !model.file.isEmpty else { return }
         let vocabulary = VocabularySettings(words: VocabularyCodec.storedWords(from: vocabularyEntries))
 

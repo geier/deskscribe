@@ -37,7 +37,7 @@ extension TranscriptionRuntime {
 enum TranscriptionRuntimeFactory {
     static func make(repoRoot: URL?, model: ModelSettings) -> TranscriptionRuntime {
 #if DESKSCRIBE_NATIVE_ONNX
-        NativeONNXRuntime(repoRoot: repoRoot)
+        NativeONNXRuntime(repoRoot: repoRoot, model: model)
 #else
         WorkerManager(repoRoot: repoRoot!, model: model)
 #endif
@@ -45,27 +45,25 @@ enum TranscriptionRuntimeFactory {
 }
 
 struct NativeONNXModelPackage {
-    static let modelID = "parakeet-primeline-onnx"
-    static let modelVersion = "v1"
-    static let manifestURL = URL(string: "https://huggingface.co/geier/deskscribe-parakeet-primeline-onnx/resolve/main/\(modelID)-\(modelVersion).manifest.json")!
-
+    let preset: NativeONNXModelPreset
     let directory: URL
 
-    static func defaultInstalledDirectory() -> URL {
+    static func defaultInstalledDirectory(for preset: NativeONNXModelPreset) -> URL {
         let baseDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("DeskScribe", isDirectory: true)
             .appendingPathComponent("Models", isDirectory: true)
-        return baseDirectory.appendingPathComponent("\(modelID)-\(modelVersion)", isDirectory: true)
+        return baseDirectory.appendingPathComponent("\(preset.id)-\(preset.version)", isDirectory: true)
     }
 
-    static func developmentDirectory(repoRoot: URL) -> URL {
-        repoRoot.appendingPathComponent("models/\(modelID)", isDirectory: true)
+    static func developmentDirectory(repoRoot: URL, for preset: NativeONNXModelPreset) -> URL {
+        repoRoot.appendingPathComponent("models/\(preset.id)", isDirectory: true)
     }
 
-    static func resolve(repoRoot: URL?) -> NativeONNXModelPackage {
-        let candidates = [defaultInstalledDirectory()] + (repoRoot.map { [developmentDirectory(repoRoot: $0)] } ?? [])
+    static func resolve(repoRoot: URL?, model: ModelSettings) -> NativeONNXModelPackage {
+        let preset = NativeONNXModelPresets.preset(for: model)
+        let candidates = [defaultInstalledDirectory(for: preset)] + (repoRoot.map { [developmentDirectory(repoRoot: $0, for: preset)] } ?? [])
         for directory in candidates {
-            let package = NativeONNXModelPackage(directory: directory)
+            let package = NativeONNXModelPackage(preset: preset, directory: directory)
             do {
                 try package.validate()
                 DebugLog.shared.info("using native ONNX model package at \(directory.path)")
@@ -75,7 +73,7 @@ struct NativeONNXModelPackage {
             }
         }
 
-        return NativeONNXModelPackage(directory: defaultInstalledDirectory())
+        return NativeONNXModelPackage(preset: preset, directory: defaultInstalledDirectory(for: preset))
     }
 
     private static let requiredFiles = [
@@ -185,7 +183,7 @@ private final class NativeONNXModelDownloader: NSObject, URLSessionDownloadDeleg
 
             do {
                 let manifest = try JSONDecoder().decode(NativeONNXModelManifest.self, from: data)
-                guard manifest.id == NativeONNXModelPackage.modelID, manifest.version == NativeONNXModelPackage.modelVersion else {
+                guard manifest.id == self.destinationPackage.preset.id, manifest.version == self.destinationPackage.preset.version else {
                     throw NativeONNXModelDownloadError.unexpectedManifest(manifest.id, manifest.version)
                 }
                 guard manifest.runtimeType == "onnxruntime", manifest.modelType == "nemo-conformer-tdt" else {
@@ -259,12 +257,12 @@ private final class NativeONNXModelDownloader: NSObject, URLSessionDownloadDeleg
         let parent = destination.deletingLastPathComponent()
         try fileManager.createDirectory(at: parent, withIntermediateDirectories: true)
 
-        let staging = parent.appendingPathComponent(".\(NativeONNXModelPackage.modelID)-\(NativeONNXModelPackage.modelVersion)-\(UUID().uuidString)", isDirectory: true)
+        let staging = parent.appendingPathComponent(".\(destinationPackage.preset.id)-\(destinationPackage.preset.version)-\(UUID().uuidString)", isDirectory: true)
         try fileManager.createDirectory(at: staging, withIntermediateDirectories: true)
         defer { try? fileManager.removeItem(at: staging) }
 
         try Self.unzip(archiveURL, to: staging)
-        try NativeONNXModelPackage(directory: staging).validate()
+        try NativeONNXModelPackage(preset: destinationPackage.preset, directory: staging).validate()
 
         if fileManager.fileExists(atPath: destination.path) {
             try fileManager.removeItem(at: destination)
@@ -299,7 +297,7 @@ private final class NativeONNXModelDownloader: NSObject, URLSessionDownloadDeleg
 
 #if DESKSCRIBE_NATIVE_ONNX
 final class NativeONNXRuntime: TranscriptionRuntime {
-    private let modelPackage: NativeONNXModelPackage
+    private var modelPackage: NativeONNXModelPackage
     private let transcriptionQueue = DispatchQueue(label: "local.DeskScribe.NativeONNXRuntime.transcription", qos: .userInitiated)
     private let modelLoadQueue = DispatchQueue(label: "local.DeskScribe.NativeONNXRuntime.model-load", qos: .userInitiated)
     private var modelDownloader: NativeONNXModelDownloader?
@@ -313,12 +311,16 @@ final class NativeONNXRuntime: TranscriptionRuntime {
     var onProgress: ((String) -> Void)?
     private(set) var isReady = false
 
-    init(repoRoot: URL) {
-        modelPackage = NativeONNXModelPackage.resolve(repoRoot: repoRoot)
+    private let repoRoot: URL?
+
+    init(repoRoot: URL, model: ModelSettings) {
+        self.repoRoot = repoRoot
+        modelPackage = NativeONNXModelPackage.resolve(repoRoot: repoRoot, model: model)
     }
 
-    init(repoRoot: URL?) {
-        modelPackage = NativeONNXModelPackage.resolve(repoRoot: repoRoot)
+    init(repoRoot: URL?, model: ModelSettings) {
+        self.repoRoot = repoRoot
+        modelPackage = NativeONNXModelPackage.resolve(repoRoot: repoRoot, model: model)
     }
 
     func start() {
@@ -349,12 +351,15 @@ final class NativeONNXRuntime: TranscriptionRuntime {
     }
 
     private func downloadAndLoadModel() {
-        let installedPackage = NativeONNXModelPackage(directory: NativeONNXModelPackage.defaultInstalledDirectory())
-        DebugLog.shared.info("native ONNX model package missing; downloading from \(NativeONNXModelPackage.manifestURL.absoluteString)")
+        let installedPackage = NativeONNXModelPackage(
+            preset: modelPackage.preset,
+            directory: NativeONNXModelPackage.defaultInstalledDirectory(for: modelPackage.preset)
+        )
+        DebugLog.shared.info("native ONNX model package missing; downloading from \(modelPackage.preset.manifestURL.absoluteString)")
         onProgress?("Downloading model...")
 
         let downloader = NativeONNXModelDownloader(
-            manifestURL: NativeONNXModelPackage.manifestURL,
+            manifestURL: modelPackage.preset.manifestURL,
             destinationPackage: installedPackage,
             progress: { [weak self] message in
                 DebugLog.shared.info("model download progress: \(message)")
@@ -400,6 +405,7 @@ final class NativeONNXRuntime: TranscriptionRuntime {
     }
 
     func updateModel(_ model: ModelSettings) {
+        modelPackage = NativeONNXModelPackage.resolve(repoRoot: repoRoot, model: model)
         restart()
     }
 

@@ -41,7 +41,7 @@ private func runNativeONNXSmokeTest(arguments: [String]) -> Int32 {
         return 2
     }
 
-    let runtime = NativeONNXRuntime(repoRoot: repoRoot)
+    let runtime = NativeONNXRuntime(repoRoot: repoRoot, model: AppSettings.defaultModel)
     let readySemaphore = DispatchSemaphore(value: 0)
     var startupError: String?
 
