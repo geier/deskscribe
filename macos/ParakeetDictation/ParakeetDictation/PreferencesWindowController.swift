@@ -1,20 +1,31 @@
 import AppKit
 import ServiceManagement
+import UniformTypeIdentifiers
 
-final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
+final class PreferencesWindowController: NSWindowController, NSWindowDelegate, NSTableViewDataSource, NSTableViewDelegate {
+    private enum TableID {
+        static let vocabulary = NSUserInterfaceItemIdentifier("VocabularyTable")
+        static let history = NSUserInterfaceItemIdentifier("HistoryTable")
+    }
+
     private let hotKeyButton = NSButton(title: "", target: nil, action: nil)
     private let triggerModePopup = NSPopUpButton()
     private let modelRepoField = NSTextField(string: "")
     private let modelFileField = NSTextField(string: "")
     private let modelPresetPopup = NSPopUpButton()
-    private let vocabularyTextView = NSTextView()
-    private let vocabularyScrollView = NSScrollView()
-    private let vocabularyParseStatusLabel = NSTextField(labelWithString: "")
     private let restorePasteboardCheckbox = NSButton(checkboxWithTitle: "Restore clipboard after pasting", target: nil, action: nil)
     private let launchAtLoginCheckbox = NSButton(checkboxWithTitle: "Open at login", target: nil, action: nil)
     private let launchAtLoginStatusLabel = NSTextField(labelWithString: "")
+    private let vocabularyTableView = NSTableView()
+    private let vocabularyPhraseField = NSTextField(string: "")
+    private let vocabularyReplacementField = NSTextField(string: "")
+    private let vocabularyStatusLabel = NSTextField(labelWithString: "")
+    private let historyTableView = NSTableView()
+    private let statsLabel = NSTextField(wrappingLabelWithString: "")
     private var modelRepoRow: NSStackView?
     private var modelFileRow: NSStackView?
+    private var vocabularyEntries: [VocabularyEntry] = []
+    private var historyEntries: [TranscriptHistoryEntry] = []
     private var capturedHotKey = AppSettings.hotKey
     private var selectedTriggerMode = AppSettings.triggerMode
     private var captureMonitor: Any?
@@ -35,7 +46,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         self.onCaptureEnded = onCaptureEnded
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 520, height: 560),
+            contentRect: NSRect(x: 0, y: 0, width: 680, height: 560),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -62,19 +73,73 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
     private func buildUI() {
         guard let contentView = window?.contentView else { return }
 
+        let root = NSStackView()
+        root.orientation = .vertical
+        root.alignment = .leading
+        root.spacing = 12
+        root.translatesAutoresizingMaskIntoConstraints = false
+        contentView.addSubview(root)
+
+        let tabView = NSTabView()
+        tabView.translatesAutoresizingMaskIntoConstraints = false
+        root.addArrangedSubview(tabView)
+
+        tabView.addTabViewItem(tab(title: "General", view: generalPane()))
+        tabView.addTabViewItem(tab(title: "Model", view: modelPane()))
+        tabView.addTabViewItem(tab(title: "Vocabulary", view: vocabularyPane()))
+        tabView.addTabViewItem(tab(title: "History & Stats", view: historyPane()))
+
+        let buttons = NSStackView()
+        buttons.orientation = .horizontal
+        buttons.spacing = 10
+        buttons.alignment = .centerY
+        let resetButton = NSButton(title: "Defaults", target: self, action: #selector(resetDefaults))
+        let cancelButton = NSButton(title: "Cancel", target: self, action: #selector(cancel))
+        let saveButton = NSButton(title: "Save", target: self, action: #selector(save))
+        saveButton.keyEquivalent = "\r"
+        buttons.addArrangedSubview(resetButton)
+        buttons.addArrangedSubview(NSView())
+        buttons.addArrangedSubview(cancelButton)
+        buttons.addArrangedSubview(saveButton)
+        root.addArrangedSubview(buttons)
+
+        NSLayoutConstraint.activate([
+            root.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 18),
+            root.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -18),
+            root.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 18),
+            root.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -18),
+            tabView.widthAnchor.constraint(equalToConstant: 644),
+            tabView.heightAnchor.constraint(equalToConstant: 462),
+            buttons.widthAnchor.constraint(equalToConstant: 644)
+        ])
+    }
+
+    private func tab(title: String, view: NSView) -> NSTabViewItem {
+        let item = NSTabViewItem(identifier: title)
+        item.label = title
+        item.view = view
+        return item
+    }
+
+    private func paneStack() -> NSStackView {
         let stack = NSStackView()
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 14
         stack.translatesAutoresizingMaskIntoConstraints = false
-        contentView.addSubview(stack)
+        let wrapper = NSView()
+        wrapper.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: wrapper.leadingAnchor, constant: 18),
+            stack.trailingAnchor.constraint(lessThanOrEqualTo: wrapper.trailingAnchor, constant: -18),
+            stack.topAnchor.constraint(equalTo: wrapper.topAnchor, constant: 18)
+        ])
+        return stack
+    }
 
-        modelPresetPopup.addItems(withTitles: Self.modelPresetTitles)
-        modelPresetPopup.target = self
-        modelPresetPopup.action = #selector(modelPresetChanged)
-#if DESKSCRIBE_NATIVE_ONNX
-        modelPresetPopup.isEnabled = false
-#endif
+    private func generalPane() -> NSView {
+        let stack = paneStack()
+        guard let wrapper = stack.superview else { return stack }
 
         triggerModePopup.addItems(withTitles: TriggerMode.allCases.map(\.displayName))
         triggerModePopup.target = self
@@ -84,15 +149,36 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         hotKeyButton.action = #selector(captureHotKey)
         hotKeyButton.bezelStyle = .rounded
 
-        vocabularyTextView.font = .systemFont(ofSize: 13)
-        vocabularyTextView.isRichText = false
-        vocabularyTextView.allowsUndo = true
-        vocabularyScrollView.documentView = vocabularyTextView
-        vocabularyScrollView.hasVerticalScroller = true
-        vocabularyScrollView.borderType = .bezelBorder
+        launchAtLoginStatusLabel.textColor = .secondaryLabelColor
+        launchAtLoginStatusLabel.font = .systemFont(ofSize: 11)
+
+        let permissionsButton = NSButton(title: "Check Permissions", target: self, action: #selector(checkPermissions))
+        permissionsButton.bezelStyle = .rounded
 
         stack.addArrangedSubview(row(label: "Hotkey", control: hotKeyButton))
         stack.addArrangedSubview(row(label: "Trigger", control: triggerModePopup))
+        stack.addArrangedSubview(row(label: "Clipboard", control: restorePasteboardCheckbox))
+        stack.addArrangedSubview(row(label: "Startup", control: verticalControls([launchAtLoginCheckbox, launchAtLoginStatusLabel])))
+        stack.addArrangedSubview(row(label: "Permissions", control: permissionsButton))
+
+        hotKeyButton.widthAnchor.constraint(equalToConstant: 180).isActive = true
+        triggerModePopup.widthAnchor.constraint(equalToConstant: 360).isActive = true
+        restorePasteboardCheckbox.widthAnchor.constraint(equalToConstant: 360).isActive = true
+        launchAtLoginCheckbox.widthAnchor.constraint(equalToConstant: 360).isActive = true
+        return wrapper
+    }
+
+    private func modelPane() -> NSView {
+        let stack = paneStack()
+        guard let wrapper = stack.superview else { return stack }
+
+        modelPresetPopup.addItems(withTitles: Self.modelPresetTitles)
+        modelPresetPopup.target = self
+        modelPresetPopup.action = #selector(modelPresetChanged)
+#if DESKSCRIBE_NATIVE_ONNX
+        modelPresetPopup.isEnabled = false
+#endif
+
         stack.addArrangedSubview(row(label: "Model", control: modelPresetPopup))
 #if !DESKSCRIBE_NATIVE_ONNX
         let repoRow = row(label: "Repo", control: modelRepoField)
@@ -102,53 +188,78 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         stack.addArrangedSubview(repoRow)
         stack.addArrangedSubview(fileRow)
 #endif
-        stack.addArrangedSubview(row(label: "Vocabulary", control: vocabularyControl()))
-        stack.addArrangedSubview(row(label: "Clipboard", control: restorePasteboardCheckbox))
-        stack.addArrangedSubview(row(label: "Startup", control: launchAtLoginControl()))
+        modelPresetPopup.widthAnchor.constraint(equalToConstant: 420).isActive = true
+        modelRepoField.widthAnchor.constraint(equalToConstant: 420).isActive = true
+        modelFileField.widthAnchor.constraint(equalToConstant: 420).isActive = true
+        return wrapper
+    }
 
-        let permissionsButton = NSButton(title: "Check Permissions", target: self, action: #selector(checkPermissions))
-        permissionsButton.bezelStyle = .rounded
-        stack.addArrangedSubview(row(label: "Permissions", control: permissionsButton))
+    private func vocabularyPane() -> NSView {
+        let stack = paneStack()
+        guard let wrapper = stack.superview else { return stack }
 
-        let buttons = NSStackView()
-        buttons.orientation = .horizontal
-        buttons.spacing = 10
-        buttons.alignment = .centerY
+        configureVocabularyTable()
+        let scroll = NSScrollView()
+        scroll.documentView = vocabularyTableView
+        scroll.hasVerticalScroller = true
+        scroll.borderType = .bezelBorder
+        scroll.widthAnchor.constraint(equalToConstant: 590).isActive = true
+        scroll.heightAnchor.constraint(equalToConstant: 230).isActive = true
 
-        let resetButton = NSButton(title: "Defaults", target: self, action: #selector(resetDefaults))
-        let cancelButton = NSButton(title: "Cancel", target: self, action: #selector(cancel))
-        let saveButton = NSButton(title: "Save", target: self, action: #selector(save))
-        saveButton.keyEquivalent = "\r"
+        let help = NSTextField(wrappingLabelWithString: "Add plain preferred words, or replacement rules like 'desk scribe' -> 'DeskScribe'. Existing raw vocabulary is migrated into this list.")
+        help.textColor = .secondaryLabelColor
+        help.font = .systemFont(ofSize: 11)
+        help.widthAnchor.constraint(equalToConstant: 590).isActive = true
 
-        buttons.addArrangedSubview(resetButton)
-        buttons.addArrangedSubview(NSView())
-        buttons.addArrangedSubview(cancelButton)
-        buttons.addArrangedSubview(saveButton)
-        stack.addArrangedSubview(buttons)
+        let addWord = NSButton(title: "Add Word", target: self, action: #selector(addVocabularyWord))
+        let addReplacement = NSButton(title: "Add Replacement", target: self, action: #selector(addVocabularyReplacement))
+        let delete = NSButton(title: "Delete Selected", target: self, action: #selector(deleteVocabularyEntry))
+        let importButton = NSButton(title: "Import JSON", target: self, action: #selector(importVocabulary))
+        let exportButton = NSButton(title: "Export JSON", target: self, action: #selector(exportVocabulary))
+        let testButton = NSButton(title: "Test Parsing", target: self, action: #selector(testVocabularyParsing))
 
-        buttons.widthAnchor.constraint(equalToConstant: 480).isActive = true
-        modelRepoField.widthAnchor.constraint(equalToConstant: 350).isActive = true
-        modelFileField.widthAnchor.constraint(equalToConstant: 350).isActive = true
-        hotKeyButton.widthAnchor.constraint(equalToConstant: 180).isActive = true
-        triggerModePopup.widthAnchor.constraint(equalToConstant: 350).isActive = true
-        modelPresetPopup.widthAnchor.constraint(equalToConstant: 350).isActive = true
-        vocabularyScrollView.widthAnchor.constraint(equalToConstant: 350).isActive = true
-        vocabularyScrollView.heightAnchor.constraint(equalToConstant: 92).isActive = true
-        restorePasteboardCheckbox.widthAnchor.constraint(equalToConstant: 350).isActive = true
-        launchAtLoginCheckbox.widthAnchor.constraint(equalToConstant: 350).isActive = true
+        vocabularyPhraseField.placeholderString = "Word or phrase"
+        vocabularyReplacementField.placeholderString = "Replacement"
+        vocabularyPhraseField.widthAnchor.constraint(equalToConstant: 250).isActive = true
+        vocabularyReplacementField.widthAnchor.constraint(equalToConstant: 250).isActive = true
+        vocabularyStatusLabel.textColor = .secondaryLabelColor
+        vocabularyStatusLabel.font = .systemFont(ofSize: 11)
 
-        NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
-            stack.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -24),
-            stack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 24)
-        ])
+        stack.addArrangedSubview(scroll)
+        stack.addArrangedSubview(help)
+        stack.addArrangedSubview(horizontalControls([vocabularyPhraseField, vocabularyReplacementField]))
+        stack.addArrangedSubview(horizontalControls([addWord, addReplacement, delete]))
+        stack.addArrangedSubview(horizontalControls([testButton, importButton, exportButton, vocabularyStatusLabel]))
+        return wrapper
+    }
+
+    private func historyPane() -> NSView {
+        let stack = paneStack()
+        guard let wrapper = stack.superview else { return stack }
+        configureHistoryTable()
+
+        let scroll = NSScrollView()
+        scroll.documentView = historyTableView
+        scroll.hasVerticalScroller = true
+        scroll.borderType = .bezelBorder
+        scroll.widthAnchor.constraint(equalToConstant: 590).isActive = true
+        scroll.heightAnchor.constraint(equalToConstant: 270).isActive = true
+
+        let refresh = NSButton(title: "Refresh", target: self, action: #selector(refreshHistory))
+        let copy = NSButton(title: "Copy Selected", target: self, action: #selector(copySelectedTranscript))
+        let clear = NSButton(title: "Clear History", target: self, action: #selector(clearHistory))
+
+        statsLabel.widthAnchor.constraint(equalToConstant: 590).isActive = true
+        stack.addArrangedSubview(statsLabel)
+        stack.addArrangedSubview(scroll)
+        stack.addArrangedSubview(horizontalControls([refresh, copy, clear]))
+        return wrapper
     }
 
     private func row(label: String, control: NSView) -> NSStackView {
         let labelView = NSTextField(labelWithString: label)
         labelView.alignment = .right
         labelView.widthAnchor.constraint(equalToConstant: 90).isActive = true
-
         let row = NSStackView(views: [labelView, control])
         row.orientation = .horizontal
         row.spacing = 12
@@ -156,20 +267,67 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         return row
     }
 
+    private func horizontalControls(_ controls: [NSView]) -> NSStackView {
+        let stack = NSStackView(views: controls)
+        stack.orientation = .horizontal
+        stack.alignment = .centerY
+        stack.spacing = 8
+        return stack
+    }
+
+    private func verticalControls(_ controls: [NSView]) -> NSStackView {
+        let stack = NSStackView(views: controls)
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 4
+        return stack
+    }
+
+    private func configureVocabularyTable() {
+        guard vocabularyTableView.tableColumns.isEmpty else { return }
+        vocabularyTableView.identifier = TableID.vocabulary
+        vocabularyTableView.delegate = self
+        vocabularyTableView.dataSource = self
+        vocabularyTableView.usesAlternatingRowBackgroundColors = true
+        addColumn(to: vocabularyTableView, id: "type", title: "Type", width: 110)
+        addColumn(to: vocabularyTableView, id: "phrase", title: "Phrase", width: 230)
+        addColumn(to: vocabularyTableView, id: "replacement", title: "Replacement", width: 230)
+    }
+
+    private func configureHistoryTable() {
+        guard historyTableView.tableColumns.isEmpty else { return }
+        historyTableView.identifier = TableID.history
+        historyTableView.delegate = self
+        historyTableView.dataSource = self
+        historyTableView.usesAlternatingRowBackgroundColors = true
+        addColumn(to: historyTableView, id: "date", title: "Date", width: 160)
+        addColumn(to: historyTableView, id: "words", title: "Words", width: 60)
+        addColumn(to: historyTableView, id: "text", title: "Transcript", width: 360)
+    }
+
+    private func addColumn(to table: NSTableView, id: String, title: String, width: CGFloat) {
+        let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier(id))
+        column.title = title
+        column.width = width
+        table.addTableColumn(column)
+    }
+
     private func loadSettings() {
         capturedHotKey = AppSettings.hotKey
         selectedTriggerMode = AppSettings.triggerMode
         let model = AppSettings.model
-        let vocabulary = AppSettings.vocabulary
         hotKeyButton.title = AppSettings.displayName(for: capturedHotKey)
         triggerModePopup.selectItem(withTitle: selectedTriggerMode.displayName)
         modelRepoField.stringValue = model.repo
         modelFileField.stringValue = model.file
-        vocabularyTextView.string = vocabulary.words.joined(separator: "\n")
         restorePasteboardCheckbox.state = AppSettings.restorePasteboardAfterPaste ? .on : .off
+        vocabularyEntries = VocabularyCodec.entries(from: AppSettings.vocabulary.words)
+        vocabularyTableView.reloadData()
+        updateVocabularyStatus()
         loadLaunchAtLoginState()
         modelPresetPopup.selectItem(withTitle: model == AppSettings.defaultModel ? Self.defaultModelTitle : "Custom")
         updateModelFieldsVisibility()
+        refreshHistory()
     }
 
     private static var defaultModelTitle: String {
@@ -188,43 +346,40 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
 #endif
     }
 
-    private func vocabularyControl() -> NSStackView {
-        let helpText = NSTextField(wrappingLabelWithString: "Optional pronunciation/spelling hints. Add one entry per line, for example: DeskScribe or desk scribe => DeskScribe")
-        helpText.textColor = .secondaryLabelColor
-        helpText.font = .systemFont(ofSize: 11)
-
-        let helpButton = NSButton(title: "Vocabulary Help", target: self, action: #selector(showVocabularyHelp))
-        helpButton.bezelStyle = .rounded
-
-        let testButton = NSButton(title: "Test Parsing", target: self, action: #selector(testVocabularyParsing))
-        testButton.bezelStyle = .rounded
-
-        let buttons = NSStackView(views: [testButton, helpButton, vocabularyParseStatusLabel])
-        buttons.orientation = .horizontal
-        buttons.alignment = .centerY
-        buttons.spacing = 8
-
-        vocabularyParseStatusLabel.textColor = .secondaryLabelColor
-        vocabularyParseStatusLabel.font = .systemFont(ofSize: 11)
-
-        let stack = NSStackView(views: [vocabularyScrollView, helpText, buttons])
-        stack.orientation = .vertical
-        stack.alignment = .leading
-        stack.spacing = 6
-        helpText.widthAnchor.constraint(equalToConstant: 350).isActive = true
-        return stack
+    func numberOfRows(in tableView: NSTableView) -> Int {
+        tableView.identifier == TableID.vocabulary ? vocabularyEntries.count : historyEntries.count
     }
 
-    private func launchAtLoginControl() -> NSStackView {
-        launchAtLoginStatusLabel.textColor = .secondaryLabelColor
-        launchAtLoginStatusLabel.font = .systemFont(ofSize: 11)
-
-        let stack = NSStackView(views: [launchAtLoginCheckbox, launchAtLoginStatusLabel])
-        stack.orientation = .vertical
-        stack.alignment = .leading
-        stack.spacing = 4
-        return stack
+    func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
+        let cell = NSTextField(labelWithString: "")
+        cell.lineBreakMode = .byTruncatingTail
+        guard let id = tableColumn?.identifier.rawValue else { return cell }
+        if tableView.identifier == TableID.vocabulary {
+            let entry = vocabularyEntries[row]
+            switch id {
+            case "type": cell.stringValue = entry.kind == .word ? "Word" : "Replacement"
+            case "phrase": cell.stringValue = entry.phrase
+            case "replacement": cell.stringValue = entry.replacement ?? ""
+            default: break
+            }
+        } else {
+            let entry = historyEntries[row]
+            switch id {
+            case "date": cell.stringValue = Self.dateFormatter.string(from: entry.createdAt)
+            case "words": cell.stringValue = String(entry.wordCount)
+            case "text": cell.stringValue = entry.text
+            default: break
+            }
+        }
+        return cell
     }
+
+    private static let dateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .short
+        return formatter
+    }()
 
     private func loadLaunchAtLoginState() {
         switch SMAppService.mainApp.status {
@@ -251,38 +406,118 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         let status = SMAppService.mainApp.status
         if shouldEnable && status == .enabled { return true }
         if !shouldEnable && status == .notRegistered { return true }
-
         do {
-            if shouldEnable {
-                try SMAppService.mainApp.register()
-            } else {
-                try SMAppService.mainApp.unregister()
-            }
+            if shouldEnable { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
             loadLaunchAtLoginState()
             return true
         } catch {
             loadLaunchAtLoginState()
-            showLaunchAtLoginError(error)
+            showAlert(title: "Launch at Login Failed", message: error.localizedDescription, style: .warning)
             return false
         }
     }
 
-    private func showLaunchAtLoginError(_ error: Error) {
+    @objc private func addVocabularyWord() {
+        let phrase = vocabularyPhraseField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !phrase.isEmpty else { return }
+        vocabularyEntries = VocabularyCodec.deduplicated(vocabularyEntries + [VocabularyEntry(kind: .word, phrase: phrase, replacement: nil)])
+        vocabularyPhraseField.stringValue = ""
+        vocabularyTableView.reloadData()
+        updateVocabularyStatus()
+    }
+
+    @objc private func addVocabularyReplacement() {
+        let phrase = vocabularyPhraseField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        let replacement = vocabularyReplacementField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !phrase.isEmpty, !replacement.isEmpty else { return }
+        vocabularyEntries = VocabularyCodec.deduplicated(vocabularyEntries + [VocabularyEntry(kind: .replacement, phrase: phrase, replacement: replacement)])
+        vocabularyPhraseField.stringValue = ""
+        vocabularyReplacementField.stringValue = ""
+        vocabularyTableView.reloadData()
+        updateVocabularyStatus()
+    }
+
+    @objc private func deleteVocabularyEntry() {
+        let selected = vocabularyTableView.selectedRowIndexes
+        guard !selected.isEmpty else { return }
+        for index in selected.reversed() {
+            vocabularyEntries.remove(at: index)
+        }
+        vocabularyTableView.reloadData()
+        updateVocabularyStatus()
+    }
+
+    @objc private func importVocabulary() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.json]
+        panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            let imported = try VocabularyCodec.importEntries(from: Data(contentsOf: url))
+            vocabularyEntries = VocabularyCodec.deduplicated(vocabularyEntries + imported)
+            vocabularyTableView.reloadData()
+            updateVocabularyStatus("Imported \(imported.count) entries")
+        } catch {
+            showAlert(title: "Vocabulary Import Failed", message: error.localizedDescription, style: .warning)
+        }
+    }
+
+    @objc private func exportVocabulary() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json]
+        panel.nameFieldStringValue = "DeskScribeVocabulary.json"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try VocabularyCodec.exportData(entries: vocabularyEntries).write(to: url, options: .atomic)
+            updateVocabularyStatus("Exported \(vocabularyEntries.count) entries")
+        } catch {
+            showAlert(title: "Vocabulary Export Failed", message: error.localizedDescription, style: .warning)
+        }
+    }
+
+    @objc private func testVocabularyParsing() {
+        let invalid = vocabularyEntries.filter { !VocabularyCodec.isValid($0) }
+        if invalid.isEmpty {
+            showAlert(title: "Vocabulary Validation Passed", message: "\(vocabularyEntries.count) entries accepted.", style: .informational)
+        } else {
+            showAlert(title: "Vocabulary Validation Failed", message: "\(invalid.count) entries are incomplete.", style: .warning)
+        }
+    }
+
+    private func updateVocabularyStatus(_ message: String? = nil) {
+        vocabularyStatusLabel.stringValue = message ?? "\(vocabularyEntries.count) entries"
+    }
+
+    @objc private func refreshHistory() {
+        historyEntries = TranscriptHistoryStore.load()
+        historyTableView.reloadData()
+        let stats = TranscriptHistoryStore.stats(for: historyEntries)
+        statsLabel.stringValue = "Dictations: \(stats.dictationCount)   Words today: \(stats.todayWords)   This week: \(stats.weekWords)   All words: \(stats.totalWords)   Characters: \(stats.totalCharacters)"
+    }
+
+    @objc private func copySelectedTranscript() {
+        let row = historyTableView.selectedRow
+        guard row >= 0, row < historyEntries.count else { return }
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(historyEntries[row].text, forType: .string)
+    }
+
+    @objc private func clearHistory() {
         let alert = NSAlert()
-        alert.messageText = "Launch at Login Failed"
-        alert.informativeText = error.localizedDescription
+        alert.messageText = "Clear Transcript History?"
+        alert.informativeText = "This removes locally saved transcript history and recalculates stats from an empty history."
         alert.alertStyle = .warning
-        alert.addButton(withTitle: "OK")
-        alert.runModal()
+        alert.addButton(withTitle: "Clear")
+        alert.addButton(withTitle: "Cancel")
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        TranscriptHistoryStore.clear()
+        refreshHistory()
     }
 
     @objc private func captureHotKey() {
         hotKeyButton.title = "Press shortcut..."
-        if let captureMonitor {
-            NSEvent.removeMonitor(captureMonitor)
-        }
+        if let captureMonitor { NSEvent.removeMonitor(captureMonitor) }
         onCaptureStarted()
-
         captureMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
             guard let self else { return event }
             let modifiers = AppSettings.modifiers(from: event)
@@ -290,7 +525,6 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
                 self.hotKeyButton.title = "Use a modifier key"
                 return nil
             }
-
             self.capturedHotKey = HotKeySettings(keyCode: CGKeyCode(event.keyCode), modifiers: modifiers)
             self.hotKeyButton.title = AppSettings.displayName(for: self.capturedHotKey)
             self.endCapture()
@@ -323,84 +557,6 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         onCheckPermissions()
     }
 
-    @objc private func showVocabularyHelp() {
-        let alert = NSAlert()
-        alert.messageText = "Vocabulary Hints"
-        alert.informativeText = "Use this for product names, people, acronyms, or words the recognizer often misspells.\n\nOne entry per line:\nPreferred spelling\nmisheard phrase => preferred spelling\nother variant -> preferred spelling\n\nExamples:\nDeskScribe\ndesk scribe => DeskScribe\npost grass -> Postgres"
-        alert.alertStyle = .informational
-        alert.addButton(withTitle: "OK")
-        alert.runModal()
-    }
-
-    @objc private func testVocabularyParsing() {
-        let result = vocabularyParseResult()
-        let issues = result.issues
-        highlightVocabularyIssues(issues)
-        if issues.isEmpty {
-            vocabularyParseStatusLabel.stringValue = "\(result.accepted.count) accepted"
-            vocabularyParseStatusLabel.textColor = .systemGreen
-        } else {
-            vocabularyParseStatusLabel.stringValue = "\(issues.count) broken line\(issues.count == 1 ? "" : "s")"
-            vocabularyParseStatusLabel.textColor = .systemRed
-        }
-
-        let alert = NSAlert()
-        alert.messageText = issues.isEmpty ? "Vocabulary Parsing Passed" : "Vocabulary Parsing Found Issues"
-        let acceptedText = result.accepted.isEmpty ? "No vocabulary entries." : result.accepted.joined(separator: "\n")
-        alert.informativeText = "Accepted entries:\n\(acceptedText)"
-        alert.alertStyle = issues.isEmpty ? .informational : .warning
-        alert.addButton(withTitle: "OK")
-        alert.runModal()
-    }
-
-    private func vocabularyParseResult() -> (accepted: [String], issues: [NSRange]) {
-        let text = vocabularyTextView.string as NSString
-        var issues: [NSRange] = []
-        var accepted: [String] = []
-        var offset = 0
-
-        for rawLine in vocabularyTextView.string.components(separatedBy: .newlines) {
-            let line = rawLine.trimmingCharacters(in: .whitespacesAndNewlines)
-            let lineRange = text.lineRange(for: NSRange(location: offset, length: min(rawLine.count, text.length - offset)))
-            offset += rawLine.count + 1
-
-            guard !line.isEmpty else { continue }
-            let separator: String?
-            if line.contains("=>") {
-                separator = "=>"
-            } else if line.contains("->") {
-                separator = "->"
-            } else {
-                separator = nil
-            }
-
-            guard let separator else {
-                accepted.append(line)
-                continue
-            }
-            let parts = line.components(separatedBy: separator)
-            if parts.count != 2 || parts[0].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || parts[1].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                issues.append(lineRange)
-            } else {
-                accepted.append("\(parts[0].trimmingCharacters(in: .whitespacesAndNewlines)) -> \(parts[1].trimmingCharacters(in: .whitespacesAndNewlines))")
-            }
-        }
-
-        return (accepted, issues)
-    }
-
-    private func highlightVocabularyIssues(_ issues: [NSRange]) {
-        let fullRange = NSRange(location: 0, length: (vocabularyTextView.string as NSString).length)
-        vocabularyTextView.textStorage?.removeAttribute(.foregroundColor, range: fullRange)
-        vocabularyTextView.textStorage?.removeAttribute(.backgroundColor, range: fullRange)
-        vocabularyTextView.textStorage?.addAttribute(.foregroundColor, value: NSColor.textColor, range: fullRange)
-
-        for range in issues {
-            vocabularyTextView.textStorage?.addAttribute(.foregroundColor, value: NSColor.systemRed, range: range)
-            vocabularyTextView.textStorage?.addAttribute(.backgroundColor, value: NSColor.systemRed.withAlphaComponent(0.12), range: range)
-        }
-    }
-
     @objc private func resetDefaults() {
         capturedHotKey = AppSettings.defaultHotKey
         selectedTriggerMode = AppSettings.defaultTriggerMode
@@ -408,7 +564,9 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         triggerModePopup.selectItem(withTitle: selectedTriggerMode.displayName)
         modelRepoField.stringValue = AppSettings.defaultModel.repo
         modelFileField.stringValue = AppSettings.defaultModel.file
-        vocabularyTextView.string = AppSettings.defaultVocabulary.words.joined(separator: "\n")
+        vocabularyEntries = []
+        vocabularyTableView.reloadData()
+        updateVocabularyStatus()
         restorePasteboardCheckbox.state = AppSettings.defaultRestorePasteboardAfterPaste ? .on : .off
         launchAtLoginCheckbox.state = .off
         launchAtLoginStatusLabel.stringValue = "Will disable when saved"
@@ -431,10 +589,8 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         } else {
             model = AppSettings.defaultModel
         }
-        let vocabulary = VocabularySettings(
-            words: AppSettings.normalizedVocabulary(vocabularyTextView.string.components(separatedBy: .newlines))
-        )
         guard !model.repo.isEmpty, !model.file.isEmpty else { return }
+        let vocabulary = VocabularySettings(words: VocabularyCodec.storedWords(from: vocabularyEntries))
 
         AppSettings.hotKey = capturedHotKey
         AppSettings.triggerMode = selectedTriggerMode
@@ -456,5 +612,14 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         NSEvent.removeMonitor(captureMonitor)
         self.captureMonitor = nil
         onCaptureEnded()
+    }
+
+    private func showAlert(title: String, message: String, style: NSAlert.Style) {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = message
+        alert.alertStyle = style
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
     }
 }
