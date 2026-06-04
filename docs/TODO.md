@@ -12,9 +12,9 @@
 
 ## Future Model Types
 
-- Evaluate smaller and faster ASR model families for local dictation use.
-- Investigate native support for CTC-based ONNX models, which may need a simpler decoder than TDT/RNNT.
-- Investigate Whisper-style ONNX models, which need different preprocessing and decoding.
+- Benchmark Moonshine tiny/base through `sherpa-onnx` on DeskScribe WAV fixtures.
+- Compare Whisper tiny/base or Distil-Whisper against the same fixtures through an existing mature runtime.
+- Prototype CTC model support before adding another transducer/RNNT or Whisper-style native decoder.
 - Investigate CoreML or MLX model variants for better Apple Silicon performance.
 - Add runtime selection based on the downloaded model package manifest instead of hard-coding one model family.
 
