@@ -31,7 +31,21 @@ enum NativeONNXModelPresets {
         manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-parakeet-primeline-onnx/resolve/main/parakeet-primeline-onnx-v1.manifest.json")!
     )
 
-    static let all = [primeline]
+    static let nvidiaTDTv3 = NativeONNXModelPreset(
+        id: "nvidia-parakeet-tdt-0.6b-v3-onnx",
+        title: "NVIDIA Parakeet TDT 0.6B v3 ONNX",
+        version: "v1",
+        manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-nvidia-parakeet-tdt-0.6b-v3-onnx/resolve/main/nvidia-parakeet-tdt-0.6b-v3-onnx-v1.manifest.json")!
+    )
+
+    static let nvidiaTDTv2 = NativeONNXModelPreset(
+        id: "nvidia-parakeet-tdt-0.6b-v2-onnx",
+        title: "NVIDIA Parakeet TDT 0.6B v2 English ONNX",
+        version: "v1",
+        manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-nvidia-parakeet-tdt-0.6b-v2-onnx/resolve/main/nvidia-parakeet-tdt-0.6b-v2-onnx-v1.manifest.json")!
+    )
+
+    static let all = [primeline, nvidiaTDTv3, nvidiaTDTv2]
     static let defaultPreset = primeline
 
     static func preset(for model: ModelSettings) -> NativeONNXModelPreset {

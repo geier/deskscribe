@@ -13,8 +13,9 @@ This branch keeps the existing Python/NeMo app intact and adds a parallel `DeskS
 - `DeskScribeONNX` validates the ONNX model package directly and no longer needs `.venv/bin/python` or `asr_worker_onnx.py` at startup.
 - `DeskScribeONNX` now loads `vocab.txt` natively and runs a first native transcription path from PCM16 WAV input through preprocessing, ONNX encoder inference, TDT greedy decoding, and text reconstruction.
 - The export package now includes `mel_fbanks_nemo128.bin`, the `onnx-asr` Nemo 128-bin mel filterbank matrix required for native preprocessing.
-- The native runtime checks `~/Library/Application Support/DeskScribe/Models/parakeet-primeline-onnx-v1` first, then falls back to the development export under `models/parakeet-primeline-onnx`.
+- The native runtime checks the selected package under `~/Library/Application Support/DeskScribe/Models/<model-id>-<version>` first, then falls back to the matching development export under `models/<model-id>`.
 - If no valid local model package exists, `DeskScribeONNX` fetches the model manifest from Hugging Face, downloads the ZIP archive, verifies SHA256, and installs it under `~/Library/Application Support/DeskScribe/Models/`.
+- The native Preferences model popup now offers PrimeLine ONNX plus NVIDIA Parakeet TDT v3 and NVIDIA Parakeet TDT v2 English packages.
 
 `DeskScribeONNX` now starts through `NativeONNXRuntime` and loads ONNX Runtime sessions in-process. Native transcription is implemented as an MVP and still needs accuracy/performance comparison against `onnx-asr` before replacing the stable Python app.
 
@@ -127,6 +128,15 @@ The app expects the `v1` manifest at:
 ```text
 https://huggingface.co/geier/deskscribe-parakeet-primeline-onnx/resolve/main/parakeet-primeline-onnx-v1.manifest.json
 ```
+
+Additional uploaded native-compatible TDT packages:
+
+```text
+https://huggingface.co/geier/deskscribe-nvidia-parakeet-tdt-0.6b-v3-onnx/resolve/main/nvidia-parakeet-tdt-0.6b-v3-onnx-v1.manifest.json
+https://huggingface.co/geier/deskscribe-nvidia-parakeet-tdt-0.6b-v2-onnx/resolve/main/nvidia-parakeet-tdt-0.6b-v2-onnx-v1.manifest.json
+```
+
+`nvidia/parakeet-unified-en-0.6b` is not packaged here because it is a unified RNNT model, while the current native runtime supports the Nemo Conformer TDT package family only.
 
 ## Build Both Apps
 
