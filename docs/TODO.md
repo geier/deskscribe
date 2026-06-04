@@ -12,7 +12,6 @@
 
 ## Future Model Types
 
-- Define a model package manifest schema with explicit `model_type`, `runtime_type`, preprocessing, decoding, file list, size, SHA256, and license fields.
 - Keep the current native runtime scoped to `nemo-conformer-tdt` packages with compatible ONNX inputs/outputs.
 - Evaluate smaller and faster ASR model families for local dictation use.
 - Investigate native support for CTC-based ONNX models, which may need a simpler decoder than TDT/RNNT.

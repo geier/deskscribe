@@ -120,7 +120,7 @@ For other Parakeet checkpoints, either use another preset such as `nvidia-parake
   --repo geier/deskscribe-parakeet-primeline-onnx
 ```
 
-The packaging script writes a versioned zip archive, a `.sha256` file, and a manifest under `dist/models/`. The archive keeps all ONNX external-data weight files next to `encoder-model.onnx`, so it can be downloaded and extracted as one complete model package.
+The packaging script writes a versioned zip archive, a `.sha256` file, and a manifest under `dist/models/`. The archive keeps all ONNX external-data weight files next to `encoder-model.onnx`, so it can be downloaded and extracted as one complete model package. The manifest shape is documented in `docs/model-package-manifest.schema.json` and includes runtime type, model type, preprocessing metadata, decoding metadata, file list, size, SHA256, and license fields.
 
 The app expects the `v1` manifest at:
 

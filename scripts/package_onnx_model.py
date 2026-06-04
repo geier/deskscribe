@@ -92,6 +92,17 @@ def main() -> None:
         "license_url": config.get("license_url"),
         "created_at": datetime.now(UTC).isoformat(),
         "required_files": REQUIRED_FILES,
+        "preprocessing": {
+            "sample_rate": config.get("sample_rate", 16000),
+            "features": config.get("features_size", 128),
+            "subsampling_factor": config.get("subsampling_factor"),
+            "mel_filterbank": config.get("mel_filterbank"),
+        },
+        "decoding": {
+            "type": config.get("decoding_type", "tdt_greedy"),
+            "blank_token": config.get("blank_token", "<blk>"),
+            "max_tokens_per_step": config.get("max_tokens_per_step", 10),
+        },
     }
     if args.repo:
         manifest["huggingface_repo"] = args.repo
