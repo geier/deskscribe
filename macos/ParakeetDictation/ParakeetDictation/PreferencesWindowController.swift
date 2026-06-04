@@ -216,7 +216,6 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         let delete = NSButton(title: "Delete Selected", target: self, action: #selector(deleteVocabularyEntry))
         let importButton = NSButton(title: "Import JSON", target: self, action: #selector(importVocabulary))
         let exportButton = NSButton(title: "Export JSON", target: self, action: #selector(exportVocabulary))
-        let testButton = NSButton(title: "Test Parsing", target: self, action: #selector(testVocabularyParsing))
 
         vocabularyPhraseField.placeholderString = "Word or phrase"
         vocabularyReplacementField.placeholderString = "Replacement"
@@ -229,7 +228,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         stack.addArrangedSubview(help)
         stack.addArrangedSubview(horizontalControls([vocabularyPhraseField, vocabularyReplacementField]))
         stack.addArrangedSubview(horizontalControls([addWord, addReplacement, delete]))
-        stack.addArrangedSubview(horizontalControls([testButton, importButton, exportButton, vocabularyStatusLabel]))
+        stack.addArrangedSubview(horizontalControls([importButton, exportButton, vocabularyStatusLabel]))
         return wrapper
     }
 
@@ -472,15 +471,6 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
             updateVocabularyStatus("Exported \(vocabularyEntries.count) entries")
         } catch {
             showAlert(title: "Vocabulary Export Failed", message: error.localizedDescription, style: .warning)
-        }
-    }
-
-    @objc private func testVocabularyParsing() {
-        let invalid = vocabularyEntries.filter { !VocabularyCodec.isValid($0) }
-        if invalid.isEmpty {
-            showAlert(title: "Vocabulary Validation Passed", message: "\(vocabularyEntries.count) entries accepted.", style: .informational)
-        } else {
-            showAlert(title: "Vocabulary Validation Failed", message: "\(invalid.count) entries are incomplete.", style: .warning)
         }
     }
 
