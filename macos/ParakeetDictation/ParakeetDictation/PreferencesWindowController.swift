@@ -612,6 +612,10 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
     }
 
     @objc private func save() {
+        let previousHotKey = AppSettings.hotKey
+        let previousTriggerMode = AppSettings.triggerMode
+        let previousModel = AppSettings.model
+
         let model: ModelSettings
         if modelPresetPopup.titleOfSelectedItem == "Custom" {
             model = ModelSettings(
@@ -631,7 +635,9 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         AppSettings.restorePasteboardAfterPaste = restorePasteboardCheckbox.state == .on
         guard applyLaunchAtLoginSetting() else { return }
         endCapture()
-        onSave(capturedHotKey, selectedTriggerMode, model, vocabulary, AppSettings.restorePasteboardAfterPaste)
+        if capturedHotKey != previousHotKey || selectedTriggerMode != previousTriggerMode || model != previousModel {
+            onSave(capturedHotKey, selectedTriggerMode, model, vocabulary, AppSettings.restorePasteboardAfterPaste)
+        }
         window?.orderOut(nil)
     }
 
