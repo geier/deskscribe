@@ -1,4 +1,5 @@
 import AppKit
+import ServiceManagement
 
 final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
     private let hotKeyButton = NSButton(title: "", target: nil, action: nil)
@@ -10,6 +11,8 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
     private let vocabularyScrollView = NSScrollView()
     private let vocabularyParseStatusLabel = NSTextField(labelWithString: "")
     private let restorePasteboardCheckbox = NSButton(checkboxWithTitle: "Restore clipboard after pasting", target: nil, action: nil)
+    private let launchAtLoginCheckbox = NSButton(checkboxWithTitle: "Open at login", target: nil, action: nil)
+    private let launchAtLoginStatusLabel = NSTextField(labelWithString: "")
     private var modelRepoRow: NSStackView?
     private var modelFileRow: NSStackView?
     private var capturedHotKey = AppSettings.hotKey
@@ -32,7 +35,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         self.onCaptureEnded = onCaptureEnded
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 520, height: 520),
+            contentRect: NSRect(x: 0, y: 0, width: 520, height: 560),
             styleMask: [.titled, .closable],
             backing: .buffered,
             defer: false
@@ -101,6 +104,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
 #endif
         stack.addArrangedSubview(row(label: "Vocabulary", control: vocabularyControl()))
         stack.addArrangedSubview(row(label: "Clipboard", control: restorePasteboardCheckbox))
+        stack.addArrangedSubview(row(label: "Startup", control: launchAtLoginControl()))
 
         let permissionsButton = NSButton(title: "Check Permissions", target: self, action: #selector(checkPermissions))
         permissionsButton.bezelStyle = .rounded
@@ -131,6 +135,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         vocabularyScrollView.widthAnchor.constraint(equalToConstant: 350).isActive = true
         vocabularyScrollView.heightAnchor.constraint(equalToConstant: 92).isActive = true
         restorePasteboardCheckbox.widthAnchor.constraint(equalToConstant: 350).isActive = true
+        launchAtLoginCheckbox.widthAnchor.constraint(equalToConstant: 350).isActive = true
 
         NSLayoutConstraint.activate([
             stack.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 24),
@@ -162,6 +167,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         modelFileField.stringValue = model.file
         vocabularyTextView.string = vocabulary.words.joined(separator: "\n")
         restorePasteboardCheckbox.state = AppSettings.restorePasteboardAfterPaste ? .on : .off
+        loadLaunchAtLoginState()
         modelPresetPopup.selectItem(withTitle: model == AppSettings.defaultModel ? Self.defaultModelTitle : "Custom")
         updateModelFieldsVisibility()
     }
@@ -207,6 +213,67 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         stack.spacing = 6
         helpText.widthAnchor.constraint(equalToConstant: 350).isActive = true
         return stack
+    }
+
+    private func launchAtLoginControl() -> NSStackView {
+        launchAtLoginStatusLabel.textColor = .secondaryLabelColor
+        launchAtLoginStatusLabel.font = .systemFont(ofSize: 11)
+
+        let stack = NSStackView(views: [launchAtLoginCheckbox, launchAtLoginStatusLabel])
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 4
+        return stack
+    }
+
+    private func loadLaunchAtLoginState() {
+        switch SMAppService.mainApp.status {
+        case .enabled:
+            launchAtLoginCheckbox.state = .on
+            launchAtLoginStatusLabel.stringValue = "Enabled"
+        case .requiresApproval:
+            launchAtLoginCheckbox.state = .on
+            launchAtLoginStatusLabel.stringValue = "Requires approval in System Settings"
+        case .notRegistered:
+            launchAtLoginCheckbox.state = .off
+            launchAtLoginStatusLabel.stringValue = "Disabled"
+        case .notFound:
+            launchAtLoginCheckbox.state = .off
+            launchAtLoginStatusLabel.stringValue = "Unavailable for this app bundle"
+        @unknown default:
+            launchAtLoginCheckbox.state = .off
+            launchAtLoginStatusLabel.stringValue = "Unknown system state"
+        }
+    }
+
+    private func applyLaunchAtLoginSetting() -> Bool {
+        let shouldEnable = launchAtLoginCheckbox.state == .on
+        let status = SMAppService.mainApp.status
+        if shouldEnable && status == .enabled { return true }
+        if !shouldEnable && status == .notRegistered { return true }
+
+        do {
+            if shouldEnable {
+                try SMAppService.mainApp.register()
+            } else {
+                try SMAppService.mainApp.unregister()
+            }
+            loadLaunchAtLoginState()
+            return true
+        } catch {
+            loadLaunchAtLoginState()
+            showLaunchAtLoginError(error)
+            return false
+        }
+    }
+
+    private func showLaunchAtLoginError(_ error: Error) {
+        let alert = NSAlert()
+        alert.messageText = "Launch at Login Failed"
+        alert.informativeText = error.localizedDescription
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
     }
 
     @objc private func captureHotKey() {
@@ -343,6 +410,8 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         modelFileField.stringValue = AppSettings.defaultModel.file
         vocabularyTextView.string = AppSettings.defaultVocabulary.words.joined(separator: "\n")
         restorePasteboardCheckbox.state = AppSettings.defaultRestorePasteboardAfterPaste ? .on : .off
+        launchAtLoginCheckbox.state = .off
+        launchAtLoginStatusLabel.stringValue = "Will disable when saved"
         modelPresetPopup.selectItem(withTitle: Self.defaultModelTitle)
         updateModelFieldsVisibility()
     }
@@ -372,6 +441,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate {
         AppSettings.model = model
         AppSettings.vocabulary = vocabulary
         AppSettings.restorePasteboardAfterPaste = restorePasteboardCheckbox.state == .on
+        guard applyLaunchAtLoginSetting() else { return }
         endCapture()
         onSave(capturedHotKey, selectedTriggerMode, model, vocabulary, AppSettings.restorePasteboardAfterPaste)
         window?.orderOut(nil)
