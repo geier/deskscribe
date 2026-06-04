@@ -1,23 +1,22 @@
 # Native ONNX Spike
 
-This branch keeps the existing Python/NeMo app intact and adds a parallel `DeskScribeONNX` target for native ONNX work.
+DeskScribe now uses a native ONNX Runtime path for local transcription. Python is retained only for model export, packaging, upload, and validation tooling.
 
 ## Current Status
 
-- `ParakeetDictation` builds the stable `DeskScribe.app`.
-- `DeskScribeONNX` builds a parallel `DeskScribeONNX.app` with a different bundle ID, app name, log path, and worker port.
+- `DeskScribeONNX` builds the native ONNX app.
 - The NeMo checkpoint exports successfully to ONNX.
 - The exported ONNX artifacts validate successfully.
 - `onnx-asr` can load the exported artifacts and transcribe a WAV file successfully.
 - `DeskScribeONNX` loads the exported ONNX sessions in-process through ONNX Runtime.
-- `DeskScribeONNX` validates the ONNX model package directly and no longer needs `.venv/bin/python` or `asr_worker_onnx.py` at startup.
+- `DeskScribeONNX` validates the ONNX model package directly and no longer needs `.venv/bin/python` or an ASR worker at startup.
 - `DeskScribeONNX` now loads `vocab.txt` natively and runs a first native transcription path from PCM16 WAV input through preprocessing, ONNX encoder inference, TDT greedy decoding, and text reconstruction.
 - The export package now includes `mel_fbanks_nemo128.bin`, the `onnx-asr` Nemo 128-bin mel filterbank matrix required for native preprocessing.
 - The native runtime checks the selected package under `~/Library/Application Support/DeskScribe/Models/<model-id>-<version>` first, then falls back to the matching development export under `models/<model-id>`.
 - If no valid local model package exists, `DeskScribeONNX` fetches the model manifest from Hugging Face, downloads the ZIP archive, verifies SHA256, and installs it under `~/Library/Application Support/DeskScribe/Models/`.
 - The native Preferences model popup now offers PrimeLine ONNX plus NVIDIA Parakeet TDT v3 and NVIDIA Parakeet TDT v2 English packages.
 
-`DeskScribeONNX` now starts through `NativeONNXRuntime` and loads ONNX Runtime sessions in-process. Native transcription is implemented as an MVP and still needs accuracy/performance comparison against `onnx-asr` before replacing the stable Python app.
+`DeskScribeONNX` starts through `NativeONNXRuntime` and loads ONNX Runtime sessions in-process.
 
 ## Export Model
 
@@ -138,7 +137,7 @@ https://huggingface.co/geier/deskscribe-nvidia-parakeet-tdt-0.6b-v2-onnx/resolve
 
 `nvidia/parakeet-unified-en-0.6b` is not packaged here because it is a unified RNNT model, while the current native runtime supports the Nemo Conformer TDT package family only.
 
-## Build Both Apps
+## Build App
 
 ```bash
 scripts/build_parallel_debug.sh
@@ -166,10 +165,9 @@ Check the ONNX app log for native session and vocabulary loading:
 open ~/Library/Logs/DeskScribeONNX/DeskScribeONNX.log
 ```
 
-Outputs:
+Output:
 
 ```text
-/var/folders/3x/dysmy0zs1tzcky924d23y5br0000gn/T/opencode/deskscribe-parallel-build/Build/Products/Debug/DeskScribe.app
 /var/folders/3x/dysmy0zs1tzcky924d23y5br0000gn/T/opencode/deskscribe-parallel-build/Build/Products/Debug/DeskScribeONNX.app
 ```
 
@@ -182,5 +180,3 @@ Outputs:
 - The ONNX package now carries the fixed Nemo mel filterbank constants needed by the Swift preprocessor.
 - Local development builds link against Homebrew's `onnxruntime` package by default, then `scripts/embed_onnxruntime.sh` copies `libonnxruntime.1.dylib` into `Contents/Frameworks` and rewrites bundle links to `@rpath/libonnxruntime.1.dylib`.
 - Compare native preprocessing/decoding output against `onnx-asr` on shared WAV fixtures and continue encoder/decoder performance work.
-- Publish the model archive and manifest to Hugging Face once the local ONNX export/package is available.
-- Remove `asr_worker_onnx.py` once native transcription quality and performance are accepted.

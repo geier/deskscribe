@@ -2,6 +2,12 @@ import Accelerate
 import CryptoKit
 import Foundation
 
+enum WorkerState {
+    case loading
+    case ready
+    case failed(String)
+}
+
 protocol TranscriptionRuntime: AnyObject {
     var onStateChange: ((WorkerState) -> Void)? { get set }
     var onProgress: ((String) -> Void)? { get set }
@@ -36,11 +42,7 @@ extension TranscriptionRuntime {
 
 enum TranscriptionRuntimeFactory {
     static func make(repoRoot: URL?, model: ModelSettings) -> TranscriptionRuntime {
-#if DESKSCRIBE_NATIVE_ONNX
         NativeONNXRuntime(repoRoot: repoRoot, model: model)
-#else
-        WorkerManager(repoRoot: repoRoot!, model: model)
-#endif
     }
 }
 
@@ -295,7 +297,6 @@ private final class NativeONNXModelDownloader: NSObject, URLSessionDownloadDeleg
     }
 }
 
-#if DESKSCRIBE_NATIVE_ONNX
 final class NativeONNXRuntime: TranscriptionRuntime {
     private var modelPackage: NativeONNXModelPackage
     private let transcriptionQueue = DispatchQueue(label: "local.DeskScribe.NativeONNXRuntime.transcription", qos: .userInitiated)
@@ -576,7 +577,6 @@ final class NativeONNXRuntime: TranscriptionRuntime {
         }
     }
 }
-#endif
 
 struct NativeONNXVocabulary {
     let tokens: [Int: String]
@@ -605,7 +605,6 @@ struct NativeONNXVocabulary {
     }
 }
 
-#if DESKSCRIBE_NATIVE_ONNX
 final class NativeONNXPreprocessor {
     private let melFilterbanks: [Float]
     private let window: [Float]
@@ -852,7 +851,6 @@ enum NativeONNXHotwords {
         return result
     }
 }
-#endif
 
 struct NativeONNXWAVAudio {
     let sampleRate: Int

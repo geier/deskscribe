@@ -74,11 +74,7 @@ enum TriggerMode: String, CaseIterable {
 }
 
 enum AppSettings {
-#if DESKSCRIBE_NATIVE_ONNX
     static let defaultModel = NativeONNXModelPresets.defaultPreset.settings
-#else
-    static let defaultModel = ModelSettings(repo: "primeline/parakeet-primeline", file: "2_95_WER.nemo")
-#endif
     static let defaultHotKey = HotKeySettings(keyCode: 49, modifiers: .maskAlternate)
     static let defaultTriggerMode = TriggerMode.toggle
     static let defaultVocabulary = VocabularySettings(words: [])

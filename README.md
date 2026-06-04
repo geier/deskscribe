@@ -1,31 +1,84 @@
 # DeskScribe
 
-DeskScribe is a macOS menu bar dictation app backed by local NeMo ASR.
+<p align="center">
+  <img src="macos/ParakeetDictation/ParakeetDictation/Resources/DeskScribeIcon.png" alt="DeskScribe app icon" width="128" height="128">
+</p>
 
-It is 100% AI slop, including this README, but it works.
+DeskScribe is a macOS menu bar dictation app that runs local speech recognition through a native ONNX Runtime path.
 
 ## What It Does
 
-- Runs speech recognition locally on your Mac.
-- Uses [`primeline/parakeet-primeline`](https://huggingface.co/primeline/parakeet-primeline) by default.
-- Starts and stops dictation with `Option+Space`.
+- Runs ASR locally in the macOS app process, without a Python worker.
+- Downloads versioned ONNX model packages from Hugging Face on first use.
+- Starts and stops dictation with `Option+Space` by default.
 - Shows live partial transcription while recording.
 - Pastes the final transcript into the previously active app.
-- Supports custom hotkeys, trigger mode, model repo/file, and vocabulary hints.
+- Supports custom hotkeys, trigger mode, model selection, vocabulary replacement rules, transcript history, and launch-at-login.
 
-Vocabulary entries can be plain preferred spellings or explicit aliases:
+## Models
+
+DeskScribe currently supports native-compatible NeMo Conformer TDT ONNX packages:
+
+- DeskScribe PrimeLine ONNX: `geier/deskscribe-parakeet-primeline-onnx`
+- NVIDIA Parakeet TDT 0.6B v3 ONNX: `geier/deskscribe-nvidia-parakeet-tdt-0.6b-v3-onnx`
+- NVIDIA Parakeet TDT 0.6B v2 English ONNX: `geier/deskscribe-nvidia-parakeet-tdt-0.6b-v2-onnx`
+
+Models are installed under:
 
 ```text
-PreferredName
-CommonMishearing => PreferredName
-Another Variant -> PreferredName
+~/Library/Application Support/DeskScribe/Models/
 ```
 
-The default model is optimized for German ASR and is a 600M parameter NeMo checkpoint. CPU inference on a Mac can be slow, especially on first run.
+Each model package is distributed as a ZIP plus manifest and SHA256 checksum. The app verifies the archive before installing it.
 
-## macOS App
+## Permissions
 
-A development Xcode project lives at:
+DeskScribe needs:
+
+- Microphone access for recording.
+- Accessibility access for the global hotkey event tap and automatic paste.
+
+## Build
+
+Install ONNX Runtime with Homebrew:
+
+```bash
+brew install onnxruntime
+```
+
+Build the native debug app:
+
+```bash
+scripts/build_parallel_debug.sh
+```
+
+Build the release app:
+
+```bash
+scripts/build_onnx_release.sh
+```
+
+Install the release app locally:
+
+```bash
+scripts/install_release_onnx_app.sh
+```
+
+The installed app path is:
+
+```text
+/Applications/DeskScribe ONNX.app
+```
+
+Logs are written to:
+
+```text
+~/Library/Logs/DeskScribeONNX/DeskScribeONNX.log
+```
+
+## Development
+
+The Xcode project lives at:
 
 ```bash
 macos/ParakeetDictation/ParakeetDictation.xcodeproj
@@ -37,115 +90,35 @@ Open it with:
 open macos/ParakeetDictation/ParakeetDictation.xcodeproj
 ```
 
-The app is menu bar-only. It launches `.venv/bin/python asr_worker.py`, talks to the local worker over HTTP, records microphone audio, transcribes it, and pastes the result.
+The main development scheme is `DeskScribeONNX`.
 
-Debug logs are written to:
+## Model Tooling
 
-```bash
-~/Library/Logs/DeskScribe/DeskScribe.log
-```
-
-Permissions needed:
-
-- Microphone access for recording.
-- Accessibility access for the global hotkey event tap and automatic paste.
-
-## Python Setup
-
-Use a virtualenv. On the original development machine this was created with `/opt/homebrew/bin/python3.13`.
+Python is only used for development tooling: exporting NeMo checkpoints to ONNX, validating exported packages, packaging ZIP manifests, and uploading model artifacts.
 
 ```bash
 /opt/homebrew/bin/python3.13 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip setuptools wheel
-pip install -r requirements.txt
+.venv/bin/python -m pip install --upgrade pip setuptools wheel
+.venv/bin/python -m pip install -r requirements-onnx.txt -r requirements-hf.txt
 ```
 
-If `sounddevice` cannot find PortAudio, install it with Homebrew and reinstall `sounddevice`:
+Export, validate, and package a model:
 
 ```bash
-brew install portaudio
-pip install --force-reinstall sounddevice
+.venv/bin/python scripts/export_nemo_onnx.py --output-dir models/parakeet-primeline-onnx
+.venv/bin/python scripts/validate_onnx_export.py models/parakeet-primeline-onnx --fixtures docs/onnx-fixtures.example.json
+.venv/bin/python scripts/package_onnx_model.py --version v1 --repo geier/deskscribe-parakeet-primeline-onnx
 ```
 
-macOS may ask for Terminal microphone permission the first time this runs. If recording fails, enable microphone access for your terminal app in `System Settings > Privacy & Security > Microphone`.
-
-## Terminal Transcription
-
-The original terminal script still works:
+Compare native app output against `onnx-asr`:
 
 ```bash
-source .venv/bin/activate
-python transcribe_mic.py
+.venv/bin/python scripts/compare_native_onnx.py \
+  models/parakeet-primeline-onnx \
+  --fixtures docs/onnx-fixtures.example.json \
+  --native-app /path/to/DeskScribeONNX.app \
+  --repo-root /path/to/deskscribe
 ```
-
-Useful options:
-
-```bash
-python transcribe_mic.py --chunk-seconds 8
-python transcribe_mic.py --list-devices
-python transcribe_mic.py --input-device 0
-python transcribe_mic.py --min-rms 0
-python transcribe_mic.py --verbose
-```
-
-`--device mps` is available, but `--device cpu` is the safest default for NeMo on macOS.
-
-## HTTP Worker
-
-The macOS app uses a long-running local worker so the NeMo model loads once:
-
-```bash
-source .venv/bin/activate
-python asr_worker.py
-```
-
-Endpoints:
-
-```bash
-GET http://127.0.0.1:8765/health
-POST http://127.0.0.1:8765/transcribe
-```
-
-`POST /transcribe` accepts a multipart WAV upload named `file` and returns JSON like `{ "text": "..." }`.
-
-## Worker Lookup
-
-The app first looks for a bundled worker at:
-
-```bash
-DeskScribe.app/Contents/Resources/Worker
-```
-
-Development builds fall back to the repo root from `DeskScribeWorkerRoot` in `Info.plist`. You can override either path at runtime:
-
-```bash
-DESKSCRIBE_WORKER_ROOT=/path/to/repo
-```
-
-## Releases
-
-Build a zipped app for GitHub Releases:
-
-```bash
-CODE_SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
-  scripts/build_release.sh 0.1.0
-```
-
-For local testing without Developer ID signing, the script defaults to ad-hoc signing:
-
-```bash
-scripts/build_release.sh 0.1.0
-```
-
-The script writes:
-
-```bash
-dist/DeskScribe-0.1.0-macos.zip
-dist/DeskScribe-0.1.0-macos.zip.sha256
-```
-
-For public distribution, sign with a Developer ID certificate and notarize the zip before attaching it to GitHub Releases. Otherwise, users may need to manually approve the app in macOS Gatekeeper.
 
 ## Homebrew
 
