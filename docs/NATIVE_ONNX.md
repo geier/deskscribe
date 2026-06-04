@@ -170,7 +170,7 @@ Outputs:
 - `NativeONNXRuntime` loads the vocabulary natively and identifies the blank token.
 - `NativeONNXRuntime.transcribe(...)` loads the app's 16 kHz mono PCM16 WAV files and executes the native ONNX path end-to-end.
 - The ONNX package now carries the fixed Nemo mel filterbank constants needed by the Swift preprocessor.
-- Local development currently links the ONNX target against Homebrew's `onnxruntime` package in `/opt/homebrew/opt/onnxruntime`.
+- Local development builds link against Homebrew's `onnxruntime` package by default, then `scripts/embed_onnxruntime.sh` copies `libonnxruntime.1.dylib` into `Contents/Frameworks` and rewrites bundle links to `@rpath/libonnxruntime.1.dylib`.
 - Compare native preprocessing/decoding output against `onnx-asr` on shared WAV fixtures and continue encoder/decoder performance work.
 - Publish the model archive and manifest to Hugging Face once the local ONNX export/package is available.
 - Remove `asr_worker_onnx.py` once native transcription quality and performance are accepted.

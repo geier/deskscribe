@@ -16,12 +16,10 @@
 - Compare Whisper tiny/base or Distil-Whisper against the same fixtures through an existing mature runtime.
 - Run a standalone WhisperKit/CoreML spike on shared fixtures before adding a production CoreML runtime.
 - Prototype CTC model support before adding another transducer/RNNT or Whisper-style native decoder.
-- Add runtime selection based on the downloaded model package manifest instead of hard-coding one model family.
+- Add runtime selection based on installed model package manifests instead of only validating the current native ONNX family.
 
 ## App Packaging
 
-- Bundle ONNX Runtime inside `DeskScribe.app/Contents/Frameworks` or replace the Homebrew path link with a distributable dependency strategy.
-- Remove hard-coded `/opt/homebrew/opt/onnxruntime` assumptions from release builds.
 - Update release packaging so the Brew cask installs only the app, not the model.
 - Add first-run UI/status for model download progress and failures. (Status menu progress is implemented; richer UI still pending.)
 
