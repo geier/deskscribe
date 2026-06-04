@@ -34,6 +34,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var pendingPasteboardRestoreWorkItem: DispatchWorkItem?
     private var isCapturingHotKey = false
     private var shouldSendReturnAfterPaste = false
+    private var hasShownModelDownloadStartMessage = false
+    private var isShowingModelFailureAlert = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         log.info("application did finish launching")
@@ -72,6 +74,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self.log.info("transcription progress: \(message)")
                 guard self.isTranscribing else {
                     self.setStatus(message)
+                    self.showModelDownloadStartMessageIfNeeded(message)
                     return
                 }
                 if self.lastPartialText.isEmpty {
@@ -235,11 +238,48 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             log.info("worker state: ready")
             setStatus(hotKeyActive ? readyStatusText() : "Error: accessibility permission needed")
             updateRetryModelDownloadMenu(isVisible: false, isEnabled: false)
+            hasShownModelDownloadStartMessage = false
         case .failed(let message):
             log.error("worker state: failed: \(message)")
             setStatus("Error: \(message)")
             updateRetryModelDownloadMenu(isVisible: true, isEnabled: true)
+            showModelFailureAlertIfNeeded(message)
         }
+    }
+
+    private func showModelDownloadStartMessageIfNeeded(_ message: String) {
+        #if DESKSCRIBE_NATIVE_ONNX
+        guard !hasShownModelDownloadStartMessage else { return }
+        guard message.hasPrefix("Fetching model manifest") || message.hasPrefix("Downloading model") else { return }
+        hasShownModelDownloadStartMessage = true
+        overlay.show("Downloading speech model...\nThis can take several minutes on first run.")
+        overlay.hide(after: 4.0)
+        #endif
+    }
+
+    private func showModelFailureAlertIfNeeded(_ message: String) {
+        #if DESKSCRIBE_NATIVE_ONNX
+        guard !isShowingModelFailureAlert else { return }
+        isShowingModelFailureAlert = true
+
+        let alert = NSAlert()
+        alert.messageText = "Speech Model Setup Failed"
+        alert.informativeText = "DeskScribe ONNX could not prepare the local speech model. Check your network connection or retry the download.\n\n\(message)"
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Retry Download")
+        alert.addButton(withTitle: "Open Debug Log")
+        alert.addButton(withTitle: "OK")
+
+        NSApp.activate(ignoringOtherApps: true)
+        let response = alert.runModal()
+        isShowingModelFailureAlert = false
+
+        if response == .alertFirstButtonReturn {
+            retryModelDownload()
+        } else if response == .alertSecondButtonReturn {
+            openDebugLog()
+        }
+        #endif
     }
 
     private func updateRetryModelDownloadMenu(isVisible: Bool, isEnabled: Bool) {

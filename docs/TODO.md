@@ -8,7 +8,7 @@
 
 ## Model Distribution
 
-- Add richer first-run UI for model download state, failures, and retry guidance. (Status-menu progress and retry-on-failure menu item exist.)
+- Add richer first-run UI for model download state, failures, and retry guidance. (Status-menu progress, first-run overlay, failure alert, and retry-on-failure menu item exist; richer Preferences UI is still pending.)
 
 ## Future Model Types
 
@@ -21,7 +21,7 @@
 ## App Packaging
 
 - Update release packaging so the Brew cask installs only the app, not the model.
-- Add first-run UI/status for model download progress and failures. (Status menu progress is implemented; richer UI still pending.)
+- Add first-run UI/status for model download progress and failures. (Status menu progress, first-run overlay, and failure alert are implemented; richer Preferences UI still pending.)
 
 ## Settings UX
 
