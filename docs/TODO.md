@@ -12,7 +12,6 @@
 
 ## Future Model Types
 
-- Keep the current native runtime scoped to `nemo-conformer-tdt` packages with compatible ONNX inputs/outputs.
 - Evaluate smaller and faster ASR model families for local dictation use.
 - Investigate native support for CTC-based ONNX models, which may need a simpler decoder than TDT/RNNT.
 - Investigate Whisper-style ONNX models, which need different preprocessing and decoding.

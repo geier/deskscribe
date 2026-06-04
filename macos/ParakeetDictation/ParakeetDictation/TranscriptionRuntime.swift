@@ -100,6 +100,8 @@ struct NativeONNXModelPackage {
 private struct NativeONNXModelManifest: Decodable {
     let id: String
     let version: String
+    let runtimeType: String
+    let modelType: String
     let archive: String
     let archiveURL: URL?
     let sha256: String
@@ -108,6 +110,8 @@ private struct NativeONNXModelManifest: Decodable {
     enum CodingKeys: String, CodingKey {
         case id
         case version
+        case runtimeType = "runtime_type"
+        case modelType = "model_type"
         case archive
         case archiveURL = "archive_url"
         case sha256
@@ -118,6 +122,7 @@ private struct NativeONNXModelManifest: Decodable {
 private enum NativeONNXModelDownloadError: LocalizedError {
     case missingArchiveURL
     case unexpectedManifest(String, String)
+    case unsupportedManifest(runtimeType: String, modelType: String)
     case badHTTPStatus(Int)
     case checksumMismatch(expected: String, actual: String)
     case unzipFailed(Int32)
@@ -128,6 +133,8 @@ private enum NativeONNXModelDownloadError: LocalizedError {
             return "model manifest is missing archive_url"
         case .unexpectedManifest(let id, let version):
             return "model manifest describes unexpected package \(id)-\(version)"
+        case .unsupportedManifest(let runtimeType, let modelType):
+            return "model manifest describes unsupported runtime=\(runtimeType) model=\(modelType)"
         case .badHTTPStatus(let status):
             return "model download failed with HTTP status \(status)"
         case .checksumMismatch(let expected, let actual):
@@ -180,6 +187,9 @@ private final class NativeONNXModelDownloader: NSObject, URLSessionDownloadDeleg
                 let manifest = try JSONDecoder().decode(NativeONNXModelManifest.self, from: data)
                 guard manifest.id == NativeONNXModelPackage.modelID, manifest.version == NativeONNXModelPackage.modelVersion else {
                     throw NativeONNXModelDownloadError.unexpectedManifest(manifest.id, manifest.version)
+                }
+                guard manifest.runtimeType == "onnxruntime", manifest.modelType == "nemo-conformer-tdt" else {
+                    throw NativeONNXModelDownloadError.unsupportedManifest(runtimeType: manifest.runtimeType, modelType: manifest.modelType)
                 }
                 guard manifest.archiveURL != nil else {
                     throw NativeONNXModelDownloadError.missingArchiveURL
