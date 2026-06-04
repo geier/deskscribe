@@ -78,13 +78,20 @@ def main() -> None:
     if missing:
         raise SystemExit(f"Missing required export artifacts: {', '.join(missing)}")
 
+    config = json.loads((model_dir / "config.json").read_text(encoding="utf-8"))
+    source_model = config.get("model_repo")
+    base_model = config.get("base_model_repo")
+
     license_text = (model_dir / "MODEL_LICENSE.md").read_text(encoding="utf-8")
-    required_license_terms = ["CC BY 4.0", "primeline/parakeet-primeline", "nvidia/parakeet-tdt-0.6b-v3"]
+    required_license_terms = ["CC BY 4.0"]
+    if source_model:
+        required_license_terms.append(source_model)
+    if base_model:
+        required_license_terms.append(base_model)
     missing_terms = [term for term in required_license_terms if term not in license_text]
     if missing_terms:
         raise SystemExit(f"MODEL_LICENSE.md is missing required attribution terms: {', '.join(missing_terms)}")
 
-    config = json.loads((model_dir / "config.json").read_text(encoding="utf-8"))
     mel_filterbank = config.get("mel_filterbank", {})
     if mel_filterbank.get("file") != "mel_fbanks_nemo128.bin":
         raise SystemExit("config.json is missing mel_filterbank.file=mel_fbanks_nemo128.bin")

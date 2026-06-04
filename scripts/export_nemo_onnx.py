@@ -21,8 +21,27 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def model_publisher(model_repo: str) -> str:
+    if model_repo.startswith("nvidia/"):
+        return "NVIDIA"
+    if model_repo.startswith("primeline/"):
+        return "primeLine / primeLine AI Services"
+    return model_repo.split("/", 1)[0]
+
+
 def write_model_license(output_dir: Path, model_repo: str, model_file: str) -> None:
     license_path = output_dir / "MODEL_LICENSE.md"
+    publisher = model_publisher(model_repo)
+    base_model_section = ""
+    if model_repo == DEFAULT_MODEL_REPO:
+        base_model_section = f"""
+## Base Model
+
+- Model: `{BASE_MODEL_REPO}`
+- Source: https://huggingface.co/{BASE_MODEL_REPO}
+- License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+- License text: {CC_BY_4_URL}
+"""
     license_text = f"""# DeskScribe ONNX Model Attribution
 
 This ONNX model package was converted for DeskScribe from the original NeMo checkpoint without retraining.
@@ -34,15 +53,8 @@ This ONNX model package was converted for DeskScribe from the original NeMo chec
 - Source: https://huggingface.co/{model_repo}
 - License: Creative Commons Attribution 4.0 International (CC BY 4.0)
 - License text: {CC_BY_4_URL}
-- Model author: Florian Zimmermeister
-- Published by: primeLine / primeLine AI Services
-
-## Base Model
-
-- Model: `{BASE_MODEL_REPO}`
-- Source: https://huggingface.co/{BASE_MODEL_REPO}
-- License: Creative Commons Attribution 4.0 International (CC BY 4.0)
-- License text: {CC_BY_4_URL}
+- Published by: {publisher}
+{base_model_section}
 
 ## Changes
 
@@ -52,7 +64,7 @@ This ONNX model package was converted for DeskScribe from the original NeMo chec
 
 ## Notice
 
-This converted package is not an official primeLine or NVIDIA release. Use of the original model and this converted package is governed by CC BY 4.0. Keep this attribution file with redistributed model artifacts.
+This converted package is not an official {publisher} release. Use of the original model and this converted package is governed by CC BY 4.0. Keep this attribution file with redistributed model artifacts.
 """
     license_path.write_text(license_text, encoding="utf-8")
     print(f"Wrote {license_path}")
@@ -107,7 +119,7 @@ def main() -> None:
         "model_type": "nemo-conformer-tdt",
         "model_repo": args.model_repo,
         "model_file": args.model_file,
-        "base_model_repo": BASE_MODEL_REPO,
+        "base_model_repo": BASE_MODEL_REPO if args.model_repo == DEFAULT_MODEL_REPO else None,
         "license": "cc-by-4.0",
         "license_url": CC_BY_4_URL,
         "conversion": "nemo-to-onnx",
