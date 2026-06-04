@@ -24,31 +24,19 @@
 
 ## Settings UX
 
-- Split Preferences into multiple panes instead of keeping every setting on one screen.
-- Add a General pane for hotkey, trigger mode, paste/clipboard behavior, permissions, and launch-at-login.
-- Add a Model pane for runtime/model download state, model selection, and model update/retry controls.
-- Add a Vocabulary pane for vocabulary aliases, word replacement rules, import/export, validation, and help.
-- Add a History & Stats pane for transcript history, usage stats, retention, and clearing controls.
+- Add richer Model pane controls for runtime/model download state and model update/retry controls.
+- Add retention settings for transcript history.
 - Preserve the current native ONNX simplification where repository/file fields are hidden unless a Python custom model is relevant.
 
 ## Vocabulary Management
 
-- Replace the single raw vocabulary text area with a structured editor.
-- Support adding a new plain word through a small input form and show saved words in a list below.
-- Support adding replacement rules like `do this` -> `instead of that` through separate phrase and replacement fields.
-- Keep both vocabulary item types: plain words and replacement aliases.
-- Allow editing and deleting individual vocabulary entries from the list.
-- Validate entries inline and surface malformed/duplicate rules without blocking unrelated valid entries.
+- Allow editing individual vocabulary entries in place from the list.
 - Keep compatibility with the existing stored vocabulary format or add a one-time migration if the storage format changes.
-- Add JSON export for the vocabulary list, including item type, phrase, replacement, and any future metadata.
-- Add JSON import with validation, duplicate handling, and a clear preview/confirmation before applying changes.
-- Add tests for parsing, validation, import/export, and migration behavior.
+- Add a clear preview/confirmation before applying imported vocabulary changes.
+- Expand tests for migration behavior.
 
 ## Transcript History
 
-- Persist completed dictation transcripts locally with timestamp, character count, word count, and app variant/runtime if useful.
-- Add a History view that lists previous transcripts with search/filter and copy actions.
-- Add a clear-history action with confirmation.
 - Add retention settings to auto-clear history after a configurable number of days.
 - Decide whether transcript history is enabled by default and document the privacy tradeoff clearly in the UI.
 - Store history in a local app-support location that is not synced or uploaded by the app.
@@ -56,11 +44,7 @@
 
 ## Usage Stats
 
-- Track words dictated per session, today, this week, and all time.
-- Track dictation count and total dictated characters as supporting stats.
-- Derive stats from transcript history where possible to avoid separate data drift.
 - Handle history clearing and retention cleanup so stats are either recalculated or explicitly scoped to retained history.
-- Add a lightweight Stats UI in the History & Stats pane.
 
 ## Launch At Login
 

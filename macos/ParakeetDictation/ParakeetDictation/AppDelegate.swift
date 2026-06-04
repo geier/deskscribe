@@ -612,6 +612,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
 
             overlay.hide()
+            TranscriptHistoryStore.append(text: trimmed, appVariant: AppVariant.displayName)
             let sendReturnAfterPaste = shouldSendReturnAfterPaste
             shouldSendReturnAfterPaste = false
             pasteIntoPreviousApp(trimmed, sendReturnAfterPaste: sendReturnAfterPaste)
