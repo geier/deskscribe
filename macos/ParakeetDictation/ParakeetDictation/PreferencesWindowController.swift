@@ -1,6 +1,58 @@
 import AppKit
-import ServiceManagement
 import UniformTypeIdentifiers
+
+private enum StartupLaunchAgent {
+    private static var label: String {
+        "\(Bundle.main.bundleIdentifier ?? "local.DeskScribe").startup"
+    }
+
+    private static var launchAgentsDirectory: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/LaunchAgents", isDirectory: true)
+    }
+
+    private static var plistURL: URL {
+        launchAgentsDirectory.appendingPathComponent("\(label).plist")
+    }
+
+    private static var currentBundlePath: String {
+        Bundle.main.bundleURL.path
+    }
+
+    static var configuredBundlePath: String? {
+        guard
+            let data = try? Data(contentsOf: plistURL),
+            let plist = try? PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [String: Any],
+            let args = plist["ProgramArguments"] as? [String],
+            args.count >= 3,
+            args[0] == "/usr/bin/open",
+            args[1] == "-a"
+        else {
+            return nil
+        }
+        return args[2]
+    }
+
+    static var isEnabledForCurrentBundle: Bool {
+        configuredBundlePath == currentBundlePath
+    }
+
+    static func enable() throws {
+        try FileManager.default.createDirectory(at: launchAgentsDirectory, withIntermediateDirectories: true)
+        let plist: [String: Any] = [
+            "Label": label,
+            "ProgramArguments": ["/usr/bin/open", "-a", currentBundlePath],
+            "RunAtLoad": true
+        ]
+        let data = try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0)
+        try data.write(to: plistURL, options: .atomic)
+    }
+
+    static func disable() throws {
+        guard FileManager.default.fileExists(atPath: plistURL.path) else { return }
+        try FileManager.default.removeItem(at: plistURL)
+    }
+}
 
 final class PreferencesWindowController: NSWindowController, NSWindowDelegate, NSTableViewDataSource, NSTableViewDelegate {
     private enum TableID {
@@ -381,32 +433,22 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
     }()
 
     private func loadLaunchAtLoginState() {
-        switch SMAppService.mainApp.status {
-        case .enabled:
+        if StartupLaunchAgent.isEnabledForCurrentBundle {
             launchAtLoginCheckbox.state = .on
             launchAtLoginStatusLabel.stringValue = "Enabled"
-        case .requiresApproval:
+        } else if StartupLaunchAgent.configuredBundlePath != nil {
             launchAtLoginCheckbox.state = .on
-            launchAtLoginStatusLabel.stringValue = "Requires approval in System Settings"
-        case .notRegistered:
+            launchAtLoginStatusLabel.stringValue = "Enabled for a different app location"
+        } else {
             launchAtLoginCheckbox.state = .off
             launchAtLoginStatusLabel.stringValue = "Disabled"
-        case .notFound:
-            launchAtLoginCheckbox.state = .off
-            launchAtLoginStatusLabel.stringValue = "Unavailable from this app location"
-        @unknown default:
-            launchAtLoginCheckbox.state = .off
-            launchAtLoginStatusLabel.stringValue = "Unknown system state"
         }
     }
 
     private func applyLaunchAtLoginSetting() -> Bool {
         let shouldEnable = launchAtLoginCheckbox.state == .on
-        let status = SMAppService.mainApp.status
-        if shouldEnable && status == .enabled { return true }
-        if !shouldEnable && status == .notRegistered { return true }
         do {
-            if shouldEnable { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
+            if shouldEnable { try StartupLaunchAgent.enable() } else { try StartupLaunchAgent.disable() }
             loadLaunchAtLoginState()
             return true
         } catch {
