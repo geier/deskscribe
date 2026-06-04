@@ -301,6 +301,7 @@ private final class NativeONNXModelDownloader: NSObject, URLSessionDownloadDeleg
 final class NativeONNXRuntime: TranscriptionRuntime {
     private let modelPackage: NativeONNXModelPackage
     private let transcriptionQueue = DispatchQueue(label: "local.DeskScribe.NativeONNXRuntime.transcription", qos: .userInitiated)
+    private let modelLoadQueue = DispatchQueue(label: "local.DeskScribe.NativeONNXRuntime.model-load", qos: .userInitiated)
     private var modelDownloader: NativeONNXModelDownloader?
     private var bridge: NativeONNXBridge?
     private var vocabulary: NativeONNXVocabulary?
@@ -324,11 +325,14 @@ final class NativeONNXRuntime: TranscriptionRuntime {
         isReady = false
         onStateChange?(.loading)
 
-        do {
-            try modelPackage.validate()
-            try loadModelPackage()
-        } catch {
-            downloadAndLoadModel()
+        modelLoadQueue.async { [weak self] in
+            guard let self else { return }
+            do {
+                try self.modelPackage.validate()
+                try self.loadModelPackage()
+            } catch {
+                self.downloadAndLoadModel()
+            }
         }
     }
 
@@ -363,10 +367,12 @@ final class NativeONNXRuntime: TranscriptionRuntime {
                     switch result {
                     case .success:
                         DebugLog.shared.info("native ONNX model package downloaded")
-                        do {
-                            try self.loadModelPackage()
-                        } catch {
-                            self.onStateChange?(.failed(error.localizedDescription))
+                        self.modelLoadQueue.async {
+                            do {
+                                try self.loadModelPackage()
+                            } catch {
+                                self.onStateChange?(.failed(error.localizedDescription))
+                            }
                         }
                     case .failure(let error):
                         DebugLog.shared.error("native ONNX model download failed: \(error.localizedDescription)")
