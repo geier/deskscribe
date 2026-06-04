@@ -14,7 +14,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
     private let modelFileField = NSTextField(string: "")
     private let modelPresetPopup = NSPopUpButton()
     private let restorePasteboardCheckbox = NSButton(checkboxWithTitle: "Restore clipboard after pasting", target: nil, action: nil)
-    private let launchAtLoginCheckbox = NSButton(checkboxWithTitle: "Open at login", target: nil, action: nil)
+    private let launchAtLoginCheckbox = NSButton(checkboxWithTitle: "Open on startup", target: nil, action: nil)
     private let launchAtLoginStatusLabel = NSTextField(labelWithString: "")
     private let vocabularyTableView = NSTableView()
     private let vocabularyPhraseField = NSTextField(string: "")
@@ -393,7 +393,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
             launchAtLoginStatusLabel.stringValue = "Disabled"
         case .notFound:
             launchAtLoginCheckbox.state = .off
-            launchAtLoginStatusLabel.stringValue = "Unavailable for this app bundle"
+            launchAtLoginStatusLabel.stringValue = "Unavailable from this app location"
         @unknown default:
             launchAtLoginCheckbox.state = .off
             launchAtLoginStatusLabel.stringValue = "Unknown system state"
