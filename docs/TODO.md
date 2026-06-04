@@ -64,9 +64,6 @@
 
 ## Launch At Login
 
-- Add a launch-at-login setting in Preferences.
-- Implement login item registration using the modern macOS `ServiceManagement` APIs.
-- Reflect the real system login-item state in the UI, including failures or missing permission/state mismatches.
 - Test launch-at-login behavior for both `DeskScribe` and `DeskScribe ONNX` bundle identifiers.
 
 ## Cleanup
