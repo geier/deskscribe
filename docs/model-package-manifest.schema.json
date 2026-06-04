@@ -21,7 +21,7 @@
   "properties": {
     "id": { "type": "string", "minLength": 1 },
     "version": { "type": "string", "minLength": 1 },
-    "runtime_type": { "type": "string", "enum": ["onnxruntime"] },
+    "runtime_type": { "type": "string", "enum": ["onnxruntime", "sherpa_onnx", "coreml_whisperkit", "mlx"] },
     "model_type": { "type": "string", "minLength": 1 },
     "archive": { "type": "string", "minLength": 1 },
     "archive_url": { "type": "string", "format": "uri" },

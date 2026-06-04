@@ -14,8 +14,8 @@
 
 - Benchmark Moonshine tiny/base through `sherpa-onnx` on DeskScribe WAV fixtures.
 - Compare Whisper tiny/base or Distil-Whisper against the same fixtures through an existing mature runtime.
+- Run a standalone WhisperKit/CoreML spike on shared fixtures before adding a production CoreML runtime.
 - Prototype CTC model support before adding another transducer/RNNT or Whisper-style native decoder.
-- Investigate CoreML or MLX model variants for better Apple Silicon performance.
 - Add runtime selection based on the downloaded model package manifest instead of hard-coding one model family.
 
 ## App Packaging
