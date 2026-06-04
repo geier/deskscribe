@@ -145,6 +145,7 @@ private final class NativeONNXModelDownloader: NSObject, URLSessionDownloadDeleg
     private let completion: (Result<Void, Error>) -> Void
     private var session: URLSession?
     private var manifest: NativeONNXModelManifest?
+    private var lastReportedDownloadPercent: Int?
 
     init(
         manifestURL: URL,
@@ -229,6 +230,9 @@ private final class NativeONNXModelDownloader: NSObject, URLSessionDownloadDeleg
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
         guard totalBytesExpectedToWrite > 0 else { return }
         let percent = Int((Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)) * 100)
+        guard percent == 100 || percent % 5 == 0 else { return }
+        guard lastReportedDownloadPercent != percent else { return }
+        lastReportedDownloadPercent = percent
         progress("Downloading model... \(percent)%")
     }
 

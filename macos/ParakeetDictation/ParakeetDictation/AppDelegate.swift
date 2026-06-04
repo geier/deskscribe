@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let statusMenuItem = NSMenuItem(title: "Status: Launching", action: nil, keyEquivalent: "")
+    private let retryModelDownloadMenuItem = NSMenuItem(title: "Retry Model Download", action: #selector(retryModelDownload), keyEquivalent: "")
     private let log = DebugLog.shared
     private let overlay = TranscriptOverlay()
     private let audioRecorder = AudioRecorder()
@@ -153,6 +154,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem(title: "About \(AppVariant.displayName)", action: #selector(showAbout), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Preferences...", action: #selector(openPreferences), keyEquivalent: ","))
         menu.addItem(NSMenuItem(title: "Check Permissions", action: #selector(checkPermissions), keyEquivalent: ""))
+        #if DESKSCRIBE_NATIVE_ONNX
+        retryModelDownloadMenuItem.isHidden = true
+        retryModelDownloadMenuItem.isEnabled = false
+        menu.addItem(retryModelDownloadMenuItem)
+        #endif
         menu.addItem(NSMenuItem(title: "Open Debug Log", action: #selector(openDebugLog), keyEquivalent: ""))
 
         #if DEBUG
@@ -224,13 +230,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case .loading:
             log.info("worker state: loading")
             setStatus("Loading ASR worker")
+            updateRetryModelDownloadMenu(isVisible: false, isEnabled: false)
         case .ready:
             log.info("worker state: ready")
             setStatus(hotKeyActive ? readyStatusText() : "Error: accessibility permission needed")
+            updateRetryModelDownloadMenu(isVisible: false, isEnabled: false)
         case .failed(let message):
             log.error("worker state: failed: \(message)")
             setStatus("Error: \(message)")
+            updateRetryModelDownloadMenu(isVisible: true, isEnabled: true)
         }
+    }
+
+    private func updateRetryModelDownloadMenu(isVisible: Bool, isEnabled: Bool) {
+        #if DESKSCRIBE_NATIVE_ONNX
+        retryModelDownloadMenuItem.isHidden = !isVisible
+        retryModelDownloadMenuItem.isEnabled = isEnabled
+        #endif
     }
 
     private func startHotKeyMonitor(promptForAccessibility: Bool) {
@@ -780,6 +796,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func restartWorker() {
         log.info("manual worker restart requested")
+        worker?.restart()
+    }
+
+    @objc private func retryModelDownload() {
+        log.info("model download retry requested")
+        updateRetryModelDownloadMenu(isVisible: true, isEnabled: false)
         worker?.restart()
     }
 

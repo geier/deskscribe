@@ -8,12 +8,7 @@
 
 ## Model Distribution
 
-- Package `models/parakeet-primeline-onnx` as a single versioned archive for download. (Initial `v1` package generated locally.)
-- Generate `manifest.json` with model version, source model, archive URL, size, SHA256, and license metadata. (Initial `v1` manifest generated locally.)
-- Publish the model archive and manifest to a Hugging Face model repository. Blocked locally until the ONNX export/package exists again and Hugging Face auth is available.
-- Add app-side model download, SHA256 verification, atomic extraction, and retry handling. (Initial download/verify/install path implemented; retry UI still pending.)
-- Store downloaded models under `~/Library/Application Support/DeskScribe/Models/`. (Runtime now checks this location.)
-- Change `NativeONNXRuntime` to load from the installed model directory before falling back to development paths. (Done for `parakeet-primeline-onnx-v1`.)
+- Add richer first-run UI for model download state, failures, and retry guidance. (Status-menu progress and retry-on-failure menu item exist.)
 
 ## Future Model Types
 
