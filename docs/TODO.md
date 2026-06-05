@@ -2,16 +2,17 @@
 
 ## Priority 1: User Installation Story
 
-- Decide final user-facing app name for distribution. Prefer `DeskScribe.app` over `DeskScribe ONNX.app` unless we still need a parallel technical variant.
-- Build a minimal DMG release pipeline, e.g. `scripts/build_release_dmg.sh`, producing `dist/DeskScribe-<version>-arm64.dmg` plus SHA256.
-- Design the DMG as a normal Mac install experience: app icon, Applications shortcut, and drag-to-install layout.
+- Make Homebrew Cask the primary user installation path for the first public distribution.
+- Decide final user-facing app name for Homebrew distribution. Prefer `DeskScribe.app` over `DeskScribe ONNX.app` unless we still need a parallel technical variant.
+- Build a release ZIP pipeline suitable for Homebrew Cask, producing `dist/DeskScribe-<version>-macos.zip` plus SHA256.
+- Update `homebrew/Casks/deskscribe.rb` with final app name, release URL, version, SHA256, and clear caveats.
+- Document tap setup and install command as the main README install flow.
 - Add a first-run setup flow that explains and checks Microphone permission, Accessibility permission, and local model availability.
 - Add an explicit `Download Selected Model` action in the app, while keeping lazy first-use download as a fallback.
 - Show model download state, failures, and retry controls in the app UI before the first dictation attempt.
-- Update README installation docs to lead with the DMG flow: download, drag to Applications, open, approve permissions, download model.
-- Keep Homebrew Cask as the power-user install path and align it with the final app name.
+- Keep DMG as a secondary distribution option after the Homebrew path is stable.
 - Plan Developer ID signing and notarization for public macOS distribution.
-- Plan Sparkle or another update mechanism after the first DMG release path is stable.
+- Plan Sparkle or another update mechanism after the first Homebrew-based release path is stable.
 
 ## Native ONNX Runtime
 
@@ -30,7 +31,7 @@
 
 ## App Packaging
 
-- Track packaging implementation under `Priority 1: User Installation Story` until the DMG install path is complete.
+- Track packaging implementation under `Priority 1: User Installation Story` until the Homebrew install path is complete.
 
 ## Settings UX
 
