@@ -66,7 +66,10 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
     private let modelFileField = NSTextField(string: "")
     private let modelPresetPopup = NSPopUpButton()
     private let modelInfoButton = NSButton(title: "i", target: nil, action: nil)
-    private let modelRecommendationLabel = NSTextField(wrappingLabelWithString: "")
+    private let modelLanguagesLabel = NSTextField(wrappingLabelWithString: "")
+    private let modelBestForLabel = NSTextField(wrappingLabelWithString: "")
+    private let modelBaseModelLabel = NSTextField(wrappingLabelWithString: "")
+    private let modelNotesLabel = NSTextField(wrappingLabelWithString: "")
     private let restorePasteboardCheckbox = NSButton(checkboxWithTitle: "Restore clipboard after pasting", target: nil, action: nil)
     private let launchAtLoginCheckbox = NSButton(checkboxWithTitle: "Open automatically at login", target: nil, action: nil)
     private let vocabularyTableView = NSTableView()
@@ -232,14 +235,27 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         modelInfoButton.action = #selector(showModelInfo)
         modelInfoButton.bezelStyle = .helpButton
         modelInfoButton.title = ""
-        modelRecommendationLabel.textColor = .secondaryLabelColor
-        modelRecommendationLabel.font = .systemFont(ofSize: 11)
+        configureModelDetailLabel(modelLanguagesLabel)
+        configureModelDetailLabel(modelBestForLabel)
+        configureModelDetailLabel(modelBaseModelLabel)
+        configureModelDetailLabel(modelNotesLabel)
 
         stack.addArrangedSubview(row(label: "Model", control: horizontalControls([modelPresetPopup, modelInfoButton])))
-        stack.addArrangedSubview(row(label: "Notes", control: modelRecommendationLabel))
+        stack.addArrangedSubview(row(label: "Languages", control: modelLanguagesLabel))
+        stack.addArrangedSubview(row(label: "Best for", control: modelBestForLabel))
+        stack.addArrangedSubview(row(label: "Base model", control: modelBaseModelLabel))
+        stack.addArrangedSubview(row(label: "Notes", control: modelNotesLabel))
         modelPresetPopup.widthAnchor.constraint(equalToConstant: 420).isActive = true
-        modelRecommendationLabel.widthAnchor.constraint(equalToConstant: 420).isActive = true
+        modelLanguagesLabel.widthAnchor.constraint(equalToConstant: 420).isActive = true
+        modelBestForLabel.widthAnchor.constraint(equalToConstant: 420).isActive = true
+        modelBaseModelLabel.widthAnchor.constraint(equalToConstant: 420).isActive = true
+        modelNotesLabel.widthAnchor.constraint(equalToConstant: 420).isActive = true
         return wrapper
+    }
+
+    private func configureModelDetailLabel(_ label: NSTextField) {
+        label.textColor = .secondaryLabelColor
+        label.font = .systemFont(ofSize: 11)
     }
 
     private func vocabularyPane() -> NSView {
@@ -374,7 +390,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         updateVocabularyStatus()
         loadLaunchAtLoginState()
         modelPresetPopup.selectItem(withTitle: Self.title(for: model))
-        updateModelRecommendation()
+        updateModelDetails()
         updateModelFieldsVisibility()
         refreshHistory()
     }
@@ -579,7 +595,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
             modelRepoField.stringValue = preset.settings.repo
             modelFileField.stringValue = preset.settings.file
         }
-        updateModelRecommendation()
+        updateModelDetails()
         updateModelFieldsVisibility()
     }
 
@@ -591,9 +607,12 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         )
     }
 
-    private func updateModelRecommendation() {
+    private func updateModelDetails() {
         let preset = NativeONNXModelPresets.preset(titled: modelPresetPopup.titleOfSelectedItem) ?? NativeONNXModelPresets.defaultPreset
-        modelRecommendationLabel.stringValue = preset.recommendation
+        modelLanguagesLabel.stringValue = preset.languages
+        modelBestForLabel.stringValue = preset.bestFor
+        modelBaseModelLabel.stringValue = preset.baseModel
+        modelNotesLabel.stringValue = preset.notes
     }
 
     private func updateModelFieldsVisibility() {
@@ -625,7 +644,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         updateVocabularyStatus()
         restorePasteboardCheckbox.state = AppSettings.defaultRestorePasteboardAfterPaste ? .on : .off
         modelPresetPopup.selectItem(withTitle: Self.defaultModelTitle)
-        updateModelRecommendation()
+        updateModelDetails()
         updateModelFieldsVisibility()
     }
 
