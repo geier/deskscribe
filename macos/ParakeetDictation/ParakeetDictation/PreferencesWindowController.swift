@@ -68,7 +68,6 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
     private let modelInfoButton = NSButton(title: "i", target: nil, action: nil)
     private let modelLanguagesLabel = NSTextField(wrappingLabelWithString: "")
     private let modelBestForLabel = NSTextField(wrappingLabelWithString: "")
-    private let modelBaseModelLabel = NSTextField(wrappingLabelWithString: "")
     private let modelNotesLabel = NSTextField(wrappingLabelWithString: "")
     private let restorePasteboardCheckbox = NSButton(checkboxWithTitle: "Restore clipboard after pasting", target: nil, action: nil)
     private let launchAtLoginCheckbox = NSButton(checkboxWithTitle: "Open automatically at login", target: nil, action: nil)
@@ -237,18 +236,15 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         modelInfoButton.title = ""
         configureModelDetailLabel(modelLanguagesLabel)
         configureModelDetailLabel(modelBestForLabel)
-        configureModelDetailLabel(modelBaseModelLabel)
         configureModelDetailLabel(modelNotesLabel)
 
         stack.addArrangedSubview(row(label: "Model", control: horizontalControls([modelPresetPopup, modelInfoButton])))
         stack.addArrangedSubview(row(label: "Languages", control: modelLanguagesLabel))
         stack.addArrangedSubview(row(label: "Best for", control: modelBestForLabel))
-        stack.addArrangedSubview(row(label: "Base model", control: modelBaseModelLabel))
         stack.addArrangedSubview(row(label: "Notes", control: modelNotesLabel))
         modelPresetPopup.widthAnchor.constraint(equalToConstant: 420).isActive = true
         modelLanguagesLabel.widthAnchor.constraint(equalToConstant: 420).isActive = true
         modelBestForLabel.widthAnchor.constraint(equalToConstant: 420).isActive = true
-        modelBaseModelLabel.widthAnchor.constraint(equalToConstant: 420).isActive = true
         modelNotesLabel.widthAnchor.constraint(equalToConstant: 420).isActive = true
         return wrapper
     }
@@ -611,7 +607,6 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         let preset = NativeONNXModelPresets.preset(titled: modelPresetPopup.titleOfSelectedItem) ?? NativeONNXModelPresets.defaultPreset
         modelLanguagesLabel.stringValue = preset.languages
         modelBestForLabel.stringValue = preset.bestFor
-        modelBaseModelLabel.stringValue = preset.baseModel
         modelNotesLabel.stringValue = preset.notes
     }
 
