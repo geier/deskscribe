@@ -17,6 +17,7 @@ struct NativeONNXModelPreset: Equatable {
     let title: String
     let version: String
     let manifestURL: URL
+    let recommendation: String
 
     var settings: ModelSettings {
         ModelSettings(repo: id, file: version)
@@ -28,21 +29,24 @@ enum NativeONNXModelPresets {
         id: "parakeet-primeline-onnx",
         title: "DeskScribe PrimeLine ONNX",
         version: "v1",
-        manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-parakeet-primeline-onnx/resolve/main/parakeet-primeline-onnx-v1.manifest.json")!
+        manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-parakeet-primeline-onnx/resolve/main/parakeet-primeline-onnx-v1.manifest.json")!,
+        recommendation: "Best default for German dictation and mixed DeskScribe testing. Choose this unless you specifically want an NVIDIA English model."
     )
 
     static let nvidiaTDTv3 = NativeONNXModelPreset(
         id: "nvidia-parakeet-tdt-0.6b-v3-onnx",
         title: "NVIDIA Parakeet TDT 0.6B v3 ONNX",
         version: "v1",
-        manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-nvidia-parakeet-tdt-0.6b-v3-onnx/resolve/main/nvidia-parakeet-tdt-0.6b-v3-onnx-v1.manifest.json")!
+        manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-nvidia-parakeet-tdt-0.6b-v3-onnx/resolve/main/nvidia-parakeet-tdt-0.6b-v3-onnx-v1.manifest.json")!,
+        recommendation: "Use for current NVIDIA Parakeet English ASR. This is the preferred English option to compare against PrimeLine."
     )
 
     static let nvidiaTDTv2 = NativeONNXModelPreset(
         id: "nvidia-parakeet-tdt-0.6b-v2-onnx",
         title: "NVIDIA Parakeet TDT 0.6B v2 English ONNX",
         version: "v1",
-        manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-nvidia-parakeet-tdt-0.6b-v2-onnx/resolve/main/nvidia-parakeet-tdt-0.6b-v2-onnx-v1.manifest.json")!
+        manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-nvidia-parakeet-tdt-0.6b-v2-onnx/resolve/main/nvidia-parakeet-tdt-0.6b-v2-onnx-v1.manifest.json")!,
+        recommendation: "Use for English fallback testing or comparison with the older NVIDIA TDT release. Prefer v3 for normal English use."
     )
 
     static let all = [primeline, nvidiaTDTv3, nvidiaTDTv2]

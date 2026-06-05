@@ -65,6 +65,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
     private let modelRepoField = NSTextField(string: "")
     private let modelFileField = NSTextField(string: "")
     private let modelPresetPopup = NSPopUpButton()
+    private let modelRecommendationLabel = NSTextField(wrappingLabelWithString: "")
     private let restorePasteboardCheckbox = NSButton(checkboxWithTitle: "Restore clipboard after pasting", target: nil, action: nil)
     private let launchAtLoginCheckbox = NSButton(checkboxWithTitle: "Open automatically at login", target: nil, action: nil)
     private let launchAtLoginStatusLabel = NSTextField(labelWithString: "")
@@ -229,9 +230,13 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         modelPresetPopup.addItems(withTitles: Self.modelPresetTitles)
         modelPresetPopup.target = self
         modelPresetPopup.action = #selector(modelPresetChanged)
+        modelRecommendationLabel.textColor = .secondaryLabelColor
+        modelRecommendationLabel.font = .systemFont(ofSize: 11)
 
         stack.addArrangedSubview(row(label: "Model", control: modelPresetPopup))
+        stack.addArrangedSubview(row(label: "Choose", control: modelRecommendationLabel))
         modelPresetPopup.widthAnchor.constraint(equalToConstant: 420).isActive = true
+        modelRecommendationLabel.widthAnchor.constraint(equalToConstant: 420).isActive = true
         return wrapper
     }
 
@@ -366,6 +371,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         updateVocabularyStatus()
         loadLaunchAtLoginState()
         modelPresetPopup.selectItem(withTitle: Self.title(for: model))
+        updateModelRecommendation()
         updateModelFieldsVisibility()
         refreshHistory()
     }
@@ -552,7 +558,13 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
             modelRepoField.stringValue = preset.settings.repo
             modelFileField.stringValue = preset.settings.file
         }
+        updateModelRecommendation()
         updateModelFieldsVisibility()
+    }
+
+    private func updateModelRecommendation() {
+        let preset = NativeONNXModelPresets.preset(titled: modelPresetPopup.titleOfSelectedItem) ?? NativeONNXModelPresets.defaultPreset
+        modelRecommendationLabel.stringValue = preset.recommendation
     }
 
     private func updateModelFieldsVisibility() {
@@ -584,6 +596,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         updateVocabularyStatus()
         restorePasteboardCheckbox.state = AppSettings.defaultRestorePasteboardAfterPaste ? .on : .off
         modelPresetPopup.selectItem(withTitle: Self.defaultModelTitle)
+        updateModelRecommendation()
         updateModelFieldsVisibility()
     }
 
