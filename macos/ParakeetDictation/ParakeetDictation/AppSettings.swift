@@ -19,7 +19,6 @@ struct NativeONNXModelPreset: Equatable {
     let manifestURL: URL
     let languages: String
     let bestFor: String
-    let baseModel: String
     let notes: String
 
     var settings: ModelSettings {
@@ -35,7 +34,6 @@ enum NativeONNXModelPresets {
         manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-parakeet-primeline-onnx/resolve/main/parakeet-primeline-onnx-v1.manifest.json")!,
         languages: "Multilingual",
         bestFor: "German dictation",
-        baseModel: "NVIDIA Parakeet TDT 0.6B v3",
         notes: "Optimized for German dictation while retaining multilingual Parakeet v3 support."
     )
 
@@ -46,7 +44,6 @@ enum NativeONNXModelPresets {
         manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-nvidia-parakeet-tdt-0.6b-v3-onnx/resolve/main/nvidia-parakeet-tdt-0.6b-v3-onnx-v1.manifest.json")!,
         languages: "25 European languages",
         bestFor: "General multilingual dictation",
-        baseModel: "NVIDIA Parakeet TDT 0.6B v3",
         notes: "Recommended default for German, English, and other European languages."
     )
 
@@ -57,7 +54,6 @@ enum NativeONNXModelPresets {
         manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-nvidia-parakeet-tdt-0.6b-v2-onnx/resolve/main/nvidia-parakeet-tdt-0.6b-v2-onnx-v1.manifest.json")!,
         languages: "English",
         bestFor: "English-only dictation",
-        baseModel: "NVIDIA Parakeet TDT 0.6B v2",
         notes: "English-only Parakeet model for users who dictate only in English."
     )
 
