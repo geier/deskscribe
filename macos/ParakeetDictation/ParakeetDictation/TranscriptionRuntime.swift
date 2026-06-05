@@ -2,6 +2,12 @@ import Accelerate
 import CryptoKit
 import Foundation
 
+enum WorkerState {
+    case loading
+    case ready
+    case failed(String)
+}
+
 protocol TranscriptionRuntime: AnyObject {
     var onStateChange: ((WorkerState) -> Void)? { get set }
     var onProgress: ((String) -> Void)? { get set }
@@ -36,36 +42,30 @@ extension TranscriptionRuntime {
 
 enum TranscriptionRuntimeFactory {
     static func make(repoRoot: URL?, model: ModelSettings) -> TranscriptionRuntime {
-#if DESKSCRIBE_NATIVE_ONNX
-        NativeONNXRuntime(repoRoot: repoRoot)
-#else
-        WorkerManager(repoRoot: repoRoot!, model: model)
-#endif
+        NativeONNXRuntime(repoRoot: repoRoot, model: model)
     }
 }
 
 struct NativeONNXModelPackage {
-    static let modelID = "parakeet-primeline-onnx"
-    static let modelVersion = "v1"
-    static let manifestURL = URL(string: "https://huggingface.co/geier/deskscribe-parakeet-primeline-onnx/resolve/main/\(modelID)-\(modelVersion).manifest.json")!
-
+    let preset: NativeONNXModelPreset
     let directory: URL
 
-    static func defaultInstalledDirectory() -> URL {
+    static func defaultInstalledDirectory(for preset: NativeONNXModelPreset) -> URL {
         let baseDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("DeskScribe", isDirectory: true)
             .appendingPathComponent("Models", isDirectory: true)
-        return baseDirectory.appendingPathComponent("\(modelID)-\(modelVersion)", isDirectory: true)
+        return baseDirectory.appendingPathComponent("\(preset.id)-\(preset.version)", isDirectory: true)
     }
 
-    static func developmentDirectory(repoRoot: URL) -> URL {
-        repoRoot.appendingPathComponent("models/\(modelID)", isDirectory: true)
+    static func developmentDirectory(repoRoot: URL, for preset: NativeONNXModelPreset) -> URL {
+        repoRoot.appendingPathComponent("models/\(preset.id)", isDirectory: true)
     }
 
-    static func resolve(repoRoot: URL?) -> NativeONNXModelPackage {
-        let candidates = [defaultInstalledDirectory()] + (repoRoot.map { [developmentDirectory(repoRoot: $0)] } ?? [])
+    static func resolve(repoRoot: URL?, model: ModelSettings) -> NativeONNXModelPackage {
+        let preset = NativeONNXModelPresets.preset(for: model)
+        let candidates = [defaultInstalledDirectory(for: preset)] + (repoRoot.map { [developmentDirectory(repoRoot: $0, for: preset)] } ?? [])
         for directory in candidates {
-            let package = NativeONNXModelPackage(directory: directory)
+            let package = NativeONNXModelPackage(preset: preset, directory: directory)
             do {
                 try package.validate()
                 DebugLog.shared.info("using native ONNX model package at \(directory.path)")
@@ -75,7 +75,7 @@ struct NativeONNXModelPackage {
             }
         }
 
-        return NativeONNXModelPackage(directory: defaultInstalledDirectory())
+        return NativeONNXModelPackage(preset: preset, directory: defaultInstalledDirectory(for: preset))
     }
 
     private static let requiredFiles = [
@@ -100,6 +100,8 @@ struct NativeONNXModelPackage {
 private struct NativeONNXModelManifest: Decodable {
     let id: String
     let version: String
+    let runtimeType: String
+    let modelType: String
     let archive: String
     let archiveURL: URL?
     let sha256: String
@@ -108,6 +110,8 @@ private struct NativeONNXModelManifest: Decodable {
     enum CodingKeys: String, CodingKey {
         case id
         case version
+        case runtimeType = "runtime_type"
+        case modelType = "model_type"
         case archive
         case archiveURL = "archive_url"
         case sha256
@@ -118,6 +122,7 @@ private struct NativeONNXModelManifest: Decodable {
 private enum NativeONNXModelDownloadError: LocalizedError {
     case missingArchiveURL
     case unexpectedManifest(String, String)
+    case unsupportedManifest(runtimeType: String, modelType: String)
     case badHTTPStatus(Int)
     case checksumMismatch(expected: String, actual: String)
     case unzipFailed(Int32)
@@ -128,6 +133,8 @@ private enum NativeONNXModelDownloadError: LocalizedError {
             return "model manifest is missing archive_url"
         case .unexpectedManifest(let id, let version):
             return "model manifest describes unexpected package \(id)-\(version)"
+        case .unsupportedManifest(let runtimeType, let modelType):
+            return "model manifest describes unsupported runtime=\(runtimeType) model=\(modelType)"
         case .badHTTPStatus(let status):
             return "model download failed with HTTP status \(status)"
         case .checksumMismatch(let expected, let actual):
@@ -145,6 +152,7 @@ private final class NativeONNXModelDownloader: NSObject, URLSessionDownloadDeleg
     private let completion: (Result<Void, Error>) -> Void
     private var session: URLSession?
     private var manifest: NativeONNXModelManifest?
+    private var lastReportedDownloadPercent: Int?
 
     init(
         manifestURL: URL,
@@ -177,8 +185,11 @@ private final class NativeONNXModelDownloader: NSObject, URLSessionDownloadDeleg
 
             do {
                 let manifest = try JSONDecoder().decode(NativeONNXModelManifest.self, from: data)
-                guard manifest.id == NativeONNXModelPackage.modelID, manifest.version == NativeONNXModelPackage.modelVersion else {
+                guard manifest.id == self.destinationPackage.preset.id, manifest.version == self.destinationPackage.preset.version else {
                     throw NativeONNXModelDownloadError.unexpectedManifest(manifest.id, manifest.version)
+                }
+                guard manifest.runtimeType == "onnxruntime", manifest.modelType == "nemo-conformer-tdt" else {
+                    throw NativeONNXModelDownloadError.unsupportedManifest(runtimeType: manifest.runtimeType, modelType: manifest.modelType)
                 }
                 guard manifest.archiveURL != nil else {
                     throw NativeONNXModelDownloadError.missingArchiveURL
@@ -229,6 +240,9 @@ private final class NativeONNXModelDownloader: NSObject, URLSessionDownloadDeleg
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didWriteData bytesWritten: Int64, totalBytesWritten: Int64, totalBytesExpectedToWrite: Int64) {
         guard totalBytesExpectedToWrite > 0 else { return }
         let percent = Int((Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)) * 100)
+        guard percent == 100 || percent % 5 == 0 else { return }
+        guard lastReportedDownloadPercent != percent else { return }
+        lastReportedDownloadPercent = percent
         progress("Downloading model... \(percent)%")
     }
 
@@ -245,12 +259,12 @@ private final class NativeONNXModelDownloader: NSObject, URLSessionDownloadDeleg
         let parent = destination.deletingLastPathComponent()
         try fileManager.createDirectory(at: parent, withIntermediateDirectories: true)
 
-        let staging = parent.appendingPathComponent(".\(NativeONNXModelPackage.modelID)-\(NativeONNXModelPackage.modelVersion)-\(UUID().uuidString)", isDirectory: true)
+        let staging = parent.appendingPathComponent(".\(destinationPackage.preset.id)-\(destinationPackage.preset.version)-\(UUID().uuidString)", isDirectory: true)
         try fileManager.createDirectory(at: staging, withIntermediateDirectories: true)
         defer { try? fileManager.removeItem(at: staging) }
 
         try Self.unzip(archiveURL, to: staging)
-        try NativeONNXModelPackage(directory: staging).validate()
+        try NativeONNXModelPackage(preset: destinationPackage.preset, directory: staging).validate()
 
         if fileManager.fileExists(atPath: destination.path) {
             try fileManager.removeItem(at: destination)
@@ -283,10 +297,10 @@ private final class NativeONNXModelDownloader: NSObject, URLSessionDownloadDeleg
     }
 }
 
-#if DESKSCRIBE_NATIVE_ONNX
 final class NativeONNXRuntime: TranscriptionRuntime {
-    private let modelPackage: NativeONNXModelPackage
+    private var modelPackage: NativeONNXModelPackage
     private let transcriptionQueue = DispatchQueue(label: "local.DeskScribe.NativeONNXRuntime.transcription", qos: .userInitiated)
+    private let modelLoadQueue = DispatchQueue(label: "local.DeskScribe.NativeONNXRuntime.model-load", qos: .userInitiated)
     private var modelDownloader: NativeONNXModelDownloader?
     private var bridge: NativeONNXBridge?
     private var vocabulary: NativeONNXVocabulary?
@@ -298,23 +312,30 @@ final class NativeONNXRuntime: TranscriptionRuntime {
     var onProgress: ((String) -> Void)?
     private(set) var isReady = false
 
-    init(repoRoot: URL) {
-        modelPackage = NativeONNXModelPackage.resolve(repoRoot: repoRoot)
+    private let repoRoot: URL?
+
+    init(repoRoot: URL, model: ModelSettings) {
+        self.repoRoot = repoRoot
+        modelPackage = NativeONNXModelPackage.resolve(repoRoot: repoRoot, model: model)
     }
 
-    init(repoRoot: URL?) {
-        modelPackage = NativeONNXModelPackage.resolve(repoRoot: repoRoot)
+    init(repoRoot: URL?, model: ModelSettings) {
+        self.repoRoot = repoRoot
+        modelPackage = NativeONNXModelPackage.resolve(repoRoot: repoRoot, model: model)
     }
 
     func start() {
         isReady = false
         onStateChange?(.loading)
 
-        do {
-            try modelPackage.validate()
-            try loadModelPackage()
-        } catch {
-            downloadAndLoadModel()
+        modelLoadQueue.async { [weak self] in
+            guard let self else { return }
+            do {
+                try self.modelPackage.validate()
+                try self.loadModelPackage()
+            } catch {
+                self.downloadAndLoadModel()
+            }
         }
     }
 
@@ -331,12 +352,15 @@ final class NativeONNXRuntime: TranscriptionRuntime {
     }
 
     private func downloadAndLoadModel() {
-        let installedPackage = NativeONNXModelPackage(directory: NativeONNXModelPackage.defaultInstalledDirectory())
-        DebugLog.shared.info("native ONNX model package missing; downloading from \(NativeONNXModelPackage.manifestURL.absoluteString)")
+        let installedPackage = NativeONNXModelPackage(
+            preset: modelPackage.preset,
+            directory: NativeONNXModelPackage.defaultInstalledDirectory(for: modelPackage.preset)
+        )
+        DebugLog.shared.info("native ONNX model package missing; downloading from \(modelPackage.preset.manifestURL.absoluteString)")
         onProgress?("Downloading model...")
 
         let downloader = NativeONNXModelDownloader(
-            manifestURL: NativeONNXModelPackage.manifestURL,
+            manifestURL: modelPackage.preset.manifestURL,
             destinationPackage: installedPackage,
             progress: { [weak self] message in
                 DebugLog.shared.info("model download progress: \(message)")
@@ -349,10 +373,12 @@ final class NativeONNXRuntime: TranscriptionRuntime {
                     switch result {
                     case .success:
                         DebugLog.shared.info("native ONNX model package downloaded")
-                        do {
-                            try self.loadModelPackage()
-                        } catch {
-                            self.onStateChange?(.failed(error.localizedDescription))
+                        self.modelLoadQueue.async {
+                            do {
+                                try self.loadModelPackage()
+                            } catch {
+                                self.onStateChange?(.failed(error.localizedDescription))
+                            }
                         }
                     case .failure(let error):
                         DebugLog.shared.error("native ONNX model download failed: \(error.localizedDescription)")
@@ -380,6 +406,7 @@ final class NativeONNXRuntime: TranscriptionRuntime {
     }
 
     func updateModel(_ model: ModelSettings) {
+        modelPackage = NativeONNXModelPackage.resolve(repoRoot: repoRoot, model: model)
         restart()
     }
 
@@ -550,7 +577,6 @@ final class NativeONNXRuntime: TranscriptionRuntime {
         }
     }
 }
-#endif
 
 struct NativeONNXVocabulary {
     let tokens: [Int: String]
@@ -579,7 +605,6 @@ struct NativeONNXVocabulary {
     }
 }
 
-#if DESKSCRIBE_NATIVE_ONNX
 final class NativeONNXPreprocessor {
     private let melFilterbanks: [Float]
     private let window: [Float]
@@ -731,7 +756,8 @@ enum NativeONNXDecoder {
 
         var state1 = zeroState(shape: bridge.decoderState1Shape)
         var state2 = zeroState(shape: bridge.decoderState2Shape)
-        var frame = Array(repeating: Float(0), count: encoderDim)
+        let frameData = NSMutableData(length: encoderDim * MemoryLayout<Float>.size) ?? NSMutableData()
+        let frameValues = frameData.mutableBytes.bindMemory(to: Float.self, capacity: encoderDim)
         var tokens: [Int] = []
         var emittedTokens = 0
         var time = 0
@@ -739,33 +765,33 @@ enum NativeONNXDecoder {
 
         while time < limit {
             for dim in 0..<encoderDim {
-                frame[dim] = encoderValues[dim * timeSteps + time]
+                frameValues[dim] = encoderValues[dim * timeSteps + time]
             }
-            let frameData = frame.withUnsafeBufferPointer { Data(buffer: $0) }
             var nextState1: NSData?
             var nextState2: NSData?
             let target = Int64(tokens.last ?? vocabulary.blankID)
             let logitsData = try bridge.runDecoder(
-                withEncoderFrame: frameData,
+                withEncoderFrame: frameData as Data,
                 target: target,
                 state1: state1 as Data,
                 state2: state2 as Data,
                 outputState1: &nextState1,
                 outputState2: &nextState2
             )
-            let logits = logitsData.withUnsafeBytes { buffer in
-                Array(buffer.bindMemory(to: Float.self))
-            }
-            guard logits.count > vocabulary.tokens.count else {
+            let tokenCount = vocabulary.tokens.count
+            let logitCount = logitsData.count / MemoryLayout<Float>.size
+            guard logitCount > tokenCount else {
                 throw NativeONNXRuntimeError.invalidDecoderOutput
             }
 
-            let tokenLogits = logits[0..<vocabulary.tokens.count]
-            let stepLogits = logits[vocabulary.tokens.count..<logits.count]
-            let token = argmax(tokenLogits)
-            let step = argmax(stepLogits)
+            let (token, tokenScore, step, stepScore) = logitsData.withUnsafeBytes { buffer in
+                let logits = buffer.bindMemory(to: Float.self)
+                let tokenResult = argmax(logits, start: 0, count: tokenCount)
+                let stepResult = argmax(logits, start: tokenCount, count: logitCount - tokenCount)
+                return (tokenResult.index, tokenResult.value, stepResult.index, stepResult.value)
+            }
             if time < 5 {
-                DebugLog.shared.info("native ONNX decode step time=\(time) token=\(token) blank=\(vocabulary.blankID) tokenScore=\(String(format: "%.3f", tokenLogits[tokenLogits.startIndex + token])) step=\(step) stepScore=\(String(format: "%.3f", stepLogits[stepLogits.startIndex + step]))")
+                DebugLog.shared.info("native ONNX decode step time=\(time) token=\(token) blank=\(vocabulary.blankID) tokenScore=\(String(format: "%.3f", tokenScore)) step=\(step) stepScore=\(String(format: "%.3f", stepScore))")
             }
             if token != vocabulary.blankID {
                 tokens.append(token)
@@ -794,14 +820,16 @@ enum NativeONNXDecoder {
         return NSMutableData(length: count * MemoryLayout<Float>.size) ?? NSData()
     }
 
-    private static func argmax(_ values: ArraySlice<Float>) -> Int {
-        var bestOffset = 0
+    private static func argmax(_ values: UnsafeBufferPointer<Float>, start: Int, count: Int) -> (index: Int, value: Float) {
+        var bestIndex = 0
         var bestValue = -Float.infinity
-        for (offset, value) in values.enumerated() where value > bestValue {
-            bestOffset = offset
+        for offset in 0..<count {
+            let value = values[start + offset]
+            guard value > bestValue else { continue }
+            bestIndex = offset
             bestValue = value
         }
-        return bestOffset
+        return (bestIndex, bestValue)
     }
 
     private static func decodeTokens(_ tokenIDs: [Int], vocabulary: NativeONNXVocabulary) -> String {
@@ -823,7 +851,6 @@ enum NativeONNXHotwords {
         return result
     }
 }
-#endif
 
 struct NativeONNXWAVAudio {
     let sampleRate: Int

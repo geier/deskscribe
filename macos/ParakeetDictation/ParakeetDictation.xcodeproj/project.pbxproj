@@ -12,26 +12,29 @@
 		A10000000000000000000003 /* AudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000013 /* AudioRecorder.swift */; };
 		A10000000000000000000004 /* HotKeyMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000014 /* HotKeyMonitor.swift */; };
 		A10000000000000000000005 /* TranscriptOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000015 /* TranscriptOverlay.swift */; };
-		A10000000000000000000006 /* WorkerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000016 /* WorkerManager.swift */; };
+		A10000000000000000000006 /* NativeONNXBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001E /* NativeONNXBridge.m */; };
 		A10000000000000000000007 /* DebugLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000018 /* DebugLog.swift */; };
 		A10000000000000000000008 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000019 /* AppSettings.swift */; };
 		A10000000000000000000009 /* PreferencesWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001A /* PreferencesWindowController.swift */; };
 		A1000000000000000000000A /* AppVariant.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001B /* AppVariant.swift */; };
 		A1000000000000000000000B /* TranscriptionRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001C /* TranscriptionRuntime.swift */; };
 		A1000000000000000000000C /* DeskScribeIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000021 /* DeskScribeIcon.icns */; };
+		A1000000000000000000000D /* VocabularySupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000022 /* VocabularySupport.swift */; };
+		A1000000000000000000000E /* TranscriptHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000023 /* TranscriptHistoryStore.swift */; };
 		B1000000000000000000000C /* NativeONNXBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001E /* NativeONNXBridge.m */; };
 		B10000000000000000000001 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000011 /* main.swift */; };
 		B10000000000000000000002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000012 /* AppDelegate.swift */; };
 		B10000000000000000000003 /* AudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000013 /* AudioRecorder.swift */; };
 		B10000000000000000000004 /* HotKeyMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000014 /* HotKeyMonitor.swift */; };
 		B10000000000000000000005 /* TranscriptOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000015 /* TranscriptOverlay.swift */; };
-		B10000000000000000000006 /* WorkerManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000016 /* WorkerManager.swift */; };
 		B10000000000000000000007 /* DebugLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000018 /* DebugLog.swift */; };
 		B10000000000000000000008 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000019 /* AppSettings.swift */; };
 		B10000000000000000000009 /* PreferencesWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001A /* PreferencesWindowController.swift */; };
 		B1000000000000000000000A /* AppVariant.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001B /* AppVariant.swift */; };
 		B1000000000000000000000B /* TranscriptionRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001C /* TranscriptionRuntime.swift */; };
 		B1000000000000000000000D /* DeskScribeIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000021 /* DeskScribeIcon.icns */; };
+		B1000000000000000000000E /* VocabularySupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000022 /* VocabularySupport.swift */; };
+		B1000000000000000000000F /* TranscriptHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000023 /* TranscriptHistoryStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -41,7 +44,6 @@
 		A10000000000000000000013 /* AudioRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecorder.swift; sourceTree = "<group>"; };
 		A10000000000000000000014 /* HotKeyMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HotKeyMonitor.swift; sourceTree = "<group>"; };
 		A10000000000000000000015 /* TranscriptOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptOverlay.swift; sourceTree = "<group>"; };
-		A10000000000000000000016 /* WorkerManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkerManager.swift; sourceTree = "<group>"; };
 		A10000000000000000000017 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A10000000000000000000018 /* DebugLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugLog.swift; sourceTree = "<group>"; };
 		A10000000000000000000019 /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
@@ -52,6 +54,8 @@
 		A1000000000000000000001E /* NativeONNXBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NativeONNXBridge.m; sourceTree = "<group>"; };
 		A1000000000000000000001F /* ParakeetDictation-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ParakeetDictation-Bridging-Header.h"; sourceTree = "<group>"; };
 		A10000000000000000000021 /* DeskScribeIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = Resources/DeskScribeIcon.icns; sourceTree = "<group>"; };
+		A10000000000000000000022 /* VocabularySupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularySupport.swift; sourceTree = "<group>"; };
+		A10000000000000000000023 /* TranscriptHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptHistoryStore.swift; sourceTree = "<group>"; };
 		B10000000000000000000010 /* DeskScribeONNX.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeskScribeONNX.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -99,7 +103,6 @@
 				A10000000000000000000013 /* AudioRecorder.swift */,
 				A10000000000000000000014 /* HotKeyMonitor.swift */,
 				A10000000000000000000015 /* TranscriptOverlay.swift */,
-				A10000000000000000000016 /* WorkerManager.swift */,
 				A10000000000000000000018 /* DebugLog.swift */,
 				A10000000000000000000019 /* AppSettings.swift */,
 				A1000000000000000000001A /* PreferencesWindowController.swift */,
@@ -108,6 +111,8 @@
 				A1000000000000000000001D /* NativeONNXBridge.h */,
 				A1000000000000000000001E /* NativeONNXBridge.m */,
 				A1000000000000000000001F /* ParakeetDictation-Bridging-Header.h */,
+				A10000000000000000000022 /* VocabularySupport.swift */,
+				A10000000000000000000023 /* TranscriptHistoryStore.swift */,
 				A10000000000000000000021 /* DeskScribeIcon.icns */,
 			);
 			path = ParakeetDictation;
@@ -216,12 +221,14 @@
 				A10000000000000000000003 /* AudioRecorder.swift in Sources */,
 				A10000000000000000000004 /* HotKeyMonitor.swift in Sources */,
 				A10000000000000000000005 /* TranscriptOverlay.swift in Sources */,
-				A10000000000000000000006 /* WorkerManager.swift in Sources */,
+				A10000000000000000000006 /* NativeONNXBridge.m in Sources */,
 				A10000000000000000000007 /* DebugLog.swift in Sources */,
 				A10000000000000000000008 /* AppSettings.swift in Sources */,
 				A10000000000000000000009 /* PreferencesWindowController.swift in Sources */,
 				A1000000000000000000000A /* AppVariant.swift in Sources */,
 				A1000000000000000000000B /* TranscriptionRuntime.swift in Sources */,
+				A1000000000000000000000D /* VocabularySupport.swift in Sources */,
+				A1000000000000000000000E /* TranscriptHistoryStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -234,12 +241,13 @@
 				B10000000000000000000003 /* AudioRecorder.swift in Sources */,
 				B10000000000000000000004 /* HotKeyMonitor.swift in Sources */,
 				B10000000000000000000005 /* TranscriptOverlay.swift in Sources */,
-				B10000000000000000000006 /* WorkerManager.swift in Sources */,
 				B10000000000000000000007 /* DebugLog.swift in Sources */,
 				B10000000000000000000008 /* AppSettings.swift in Sources */,
 				B10000000000000000000009 /* PreferencesWindowController.swift in Sources */,
 				B1000000000000000000000A /* AppVariant.swift in Sources */,
 				B1000000000000000000000B /* TranscriptionRuntime.swift in Sources */,
+				B1000000000000000000000E /* VocabularySupport.swift in Sources */,
+				B1000000000000000000000F /* TranscriptHistoryStore.swift in Sources */,
 				B1000000000000000000000C /* NativeONNXBridge.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -377,10 +385,15 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
+					/opt/homebrew/opt/onnxruntime/lib,
 				);
+				HEADER_SEARCH_PATHS = /opt/homebrew/opt/onnxruntime/include;
+				LIBRARY_SEARCH_PATHS = /opt/homebrew/opt/onnxruntime/lib;
 				MARKETING_VERSION = 0.1;
+				OTHER_LDFLAGS = "-lonnxruntime";
 				PRODUCT_BUNDLE_IDENTIFIER = local.DeskScribe;
 				PRODUCT_NAME = DeskScribe;
+				SWIFT_OBJC_BRIDGING_HEADER = "ParakeetDictation/ParakeetDictation-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
@@ -400,10 +413,15 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
+					/opt/homebrew/opt/onnxruntime/lib,
 				);
+				HEADER_SEARCH_PATHS = /opt/homebrew/opt/onnxruntime/include;
+				LIBRARY_SEARCH_PATHS = /opt/homebrew/opt/onnxruntime/lib;
 				MARKETING_VERSION = 0.1;
+				OTHER_LDFLAGS = "-lonnxruntime";
 				PRODUCT_BUNDLE_IDENTIFIER = local.DeskScribe;
 				PRODUCT_NAME = DeskScribe;
+				SWIFT_OBJC_BRIDGING_HEADER = "ParakeetDictation/ParakeetDictation-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
@@ -431,7 +449,6 @@
 				OTHER_LDFLAGS = "-lonnxruntime";
 				PRODUCT_BUNDLE_IDENTIFIER = local.DeskScribe.ONNX;
 				PRODUCT_NAME = DeskScribeONNX;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DESKSCRIBE_NATIVE_ONNX";
 				SWIFT_OBJC_BRIDGING_HEADER = "ParakeetDictation/ParakeetDictation-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
@@ -460,7 +477,6 @@
 				OTHER_LDFLAGS = "-lonnxruntime";
 				PRODUCT_BUNDLE_IDENTIFIER = local.DeskScribe.ONNX;
 				PRODUCT_NAME = DeskScribeONNX;
-				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited) DESKSCRIBE_NATIVE_ONNX";
 				SWIFT_OBJC_BRIDGING_HEADER = "ParakeetDictation/ParakeetDictation-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};

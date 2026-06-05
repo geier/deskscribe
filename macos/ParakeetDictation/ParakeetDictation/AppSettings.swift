@@ -12,6 +12,51 @@ struct ModelSettings: Equatable {
     var file: String
 }
 
+struct NativeONNXModelPreset: Equatable {
+    let id: String
+    let title: String
+    let version: String
+    let manifestURL: URL
+
+    var settings: ModelSettings {
+        ModelSettings(repo: id, file: version)
+    }
+}
+
+enum NativeONNXModelPresets {
+    static let primeline = NativeONNXModelPreset(
+        id: "parakeet-primeline-onnx",
+        title: "DeskScribe PrimeLine ONNX",
+        version: "v1",
+        manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-parakeet-primeline-onnx/resolve/main/parakeet-primeline-onnx-v1.manifest.json")!
+    )
+
+    static let nvidiaTDTv3 = NativeONNXModelPreset(
+        id: "nvidia-parakeet-tdt-0.6b-v3-onnx",
+        title: "NVIDIA Parakeet TDT 0.6B v3 ONNX",
+        version: "v1",
+        manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-nvidia-parakeet-tdt-0.6b-v3-onnx/resolve/main/nvidia-parakeet-tdt-0.6b-v3-onnx-v1.manifest.json")!
+    )
+
+    static let nvidiaTDTv2 = NativeONNXModelPreset(
+        id: "nvidia-parakeet-tdt-0.6b-v2-onnx",
+        title: "NVIDIA Parakeet TDT 0.6B v2 English ONNX",
+        version: "v1",
+        manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-nvidia-parakeet-tdt-0.6b-v2-onnx/resolve/main/nvidia-parakeet-tdt-0.6b-v2-onnx-v1.manifest.json")!
+    )
+
+    static let all = [primeline, nvidiaTDTv3, nvidiaTDTv2]
+    static let defaultPreset = primeline
+
+    static func preset(for model: ModelSettings) -> NativeONNXModelPreset {
+        all.first { $0.settings == model } ?? defaultPreset
+    }
+
+    static func preset(titled title: String?) -> NativeONNXModelPreset? {
+        all.first { $0.title == title }
+    }
+}
+
 struct VocabularySettings: Equatable {
     var words: [String]
 }
@@ -29,7 +74,7 @@ enum TriggerMode: String, CaseIterable {
 }
 
 enum AppSettings {
-    static let defaultModel = ModelSettings(repo: "primeline/parakeet-primeline", file: "2_95_WER.nemo")
+    static let defaultModel = NativeONNXModelPresets.defaultPreset.settings
     static let defaultHotKey = HotKeySettings(keyCode: 49, modifiers: .maskAlternate)
     static let defaultTriggerMode = TriggerMode.toggle
     static let defaultVocabulary = VocabularySettings(words: [])

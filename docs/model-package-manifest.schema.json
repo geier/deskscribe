@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/geier/deskscribe/docs/model-package-manifest.schema.json",
+  "title": "DeskScribe Model Package Manifest",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "id",
+    "version",
+    "runtime_type",
+    "model_type",
+    "archive",
+    "sha256",
+    "size",
+    "license",
+    "created_at",
+    "required_files",
+    "preprocessing",
+    "decoding"
+  ],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "version": { "type": "string", "minLength": 1 },
+    "runtime_type": { "type": "string", "enum": ["onnxruntime", "sherpa_onnx", "coreml_whisperkit", "mlx"] },
+    "model_type": { "type": "string", "minLength": 1 },
+    "archive": { "type": "string", "minLength": 1 },
+    "archive_url": { "type": "string", "format": "uri" },
+    "sha256": { "type": "string", "pattern": "^[a-fA-F0-9]{64}$" },
+    "size": { "type": "integer", "minimum": 1 },
+    "source_model": { "type": ["string", "null"] },
+    "source_file": { "type": ["string", "null"] },
+    "base_model": { "type": ["string", "null"] },
+    "license": { "type": "string", "minLength": 1 },
+    "license_url": { "type": ["string", "null"], "format": "uri" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "required_files": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "minItems": 1,
+      "uniqueItems": true
+    },
+    "preprocessing": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["sample_rate", "features", "mel_filterbank"],
+      "properties": {
+        "sample_rate": { "type": "integer", "minimum": 1 },
+        "features": { "type": "integer", "minimum": 1 },
+        "mel_filterbank": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": ["file", "rows", "columns", "dtype"],
+          "properties": {
+            "file": { "type": "string", "minLength": 1 },
+            "rows": { "type": "integer", "minimum": 1 },
+            "columns": { "type": "integer", "minimum": 1 },
+            "dtype": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "decoding": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["type", "blank_token", "max_tokens_per_step"],
+      "properties": {
+        "type": { "type": "string", "minLength": 1 },
+        "blank_token": { "type": "string", "minLength": 1 },
+        "max_tokens_per_step": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

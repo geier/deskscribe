@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let statusMenuItem = NSMenuItem(title: "Status: Launching", action: nil, keyEquivalent: "")
+    private let retryModelDownloadMenuItem = NSMenuItem(title: "Retry Model Download", action: #selector(retryModelDownload), keyEquivalent: "")
     private let log = DebugLog.shared
     private let overlay = TranscriptOverlay()
     private let audioRecorder = AudioRecorder()
@@ -33,30 +34,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var pendingPasteboardRestoreWorkItem: DispatchWorkItem?
     private var isCapturingHotKey = false
     private var shouldSendReturnAfterPaste = false
+    private var hasShownModelDownloadStartMessage = false
+    private var isShowingModelFailureAlert = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         log.info("application did finish launching")
         setupMenu()
 
-#if DESKSCRIBE_NATIVE_ONNX
-        #if DEBUG
+#if DEBUG
         let repoRoot = resolveRepoRoot()
         if let repoRoot {
             log.info("development repo root: \(repoRoot.path)")
         } else {
             log.info("development repo root not found; native ONNX runtime will use installed model paths")
         }
-        #else
+#else
         let repoRoot: URL? = nil
         log.info("release native ONNX runtime will use installed model paths")
-        #endif
-#else
-        guard let repoRoot = resolveRepoRoot() else {
-            log.error("repo root not found")
-            setStatus("Error: repo root not found")
-            return
-        }
-        log.info("repo root: \(repoRoot.path)")
 #endif
 
         let worker = TranscriptionRuntimeFactory.make(repoRoot: repoRoot, model: AppSettings.model)
@@ -71,6 +65,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self.log.info("transcription progress: \(message)")
                 guard self.isTranscribing else {
                     self.setStatus(message)
+                    self.showModelDownloadStartMessageIfNeeded(message)
                     return
                 }
                 if self.lastPartialText.isEmpty {
@@ -153,6 +148,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(NSMenuItem(title: "About \(AppVariant.displayName)", action: #selector(showAbout), keyEquivalent: ""))
         menu.addItem(NSMenuItem(title: "Preferences...", action: #selector(openPreferences), keyEquivalent: ","))
         menu.addItem(NSMenuItem(title: "Check Permissions", action: #selector(checkPermissions), keyEquivalent: ""))
+        retryModelDownloadMenuItem.isHidden = true
+        retryModelDownloadMenuItem.isEnabled = false
+        menu.addItem(retryModelDownloadMenuItem)
         menu.addItem(NSMenuItem(title: "Open Debug Log", action: #selector(openDebugLog), keyEquivalent: ""))
 
         #if DEBUG
@@ -179,13 +177,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        if let bundledWorkerURL = Bundle.main.resourceURL?.appendingPathComponent("Worker") {
-            log.info("checking bundled worker path=\(bundledWorkerURL.path)")
-            if let repoRoot = validRepoRoot(bundledWorkerURL) {
-                return repoRoot
-            }
-        }
-
         if let plistPath = Bundle.main.object(forInfoDictionaryKey: "DeskScribeWorkerRoot") as? String {
             log.info("using DeskScribeWorkerRoot Info.plist value=\(plistPath)")
             return validRepoRoot(URL(fileURLWithPath: plistPath).standardizedFileURL)
@@ -195,9 +186,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func validRepoRoot(_ url: URL) -> URL? {
-#if DESKSCRIBE_NATIVE_ONNX
+        let preset = NativeONNXModelPresets.preset(for: AppSettings.model)
         let modelPackage = NativeONNXModelPackage(
-            directory: NativeONNXModelPackage.developmentDirectory(repoRoot: url)
+            preset: preset,
+            directory: NativeONNXModelPackage.developmentDirectory(repoRoot: url, for: preset)
         )
         do {
             try modelPackage.validate()
@@ -206,15 +198,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             log.warning("invalid repo root candidate=\(url.path), native ONNX model validation failed: \(error.localizedDescription)")
             return nil
         }
-#else
-        let workerPath = url.appendingPathComponent(AppVariant.workerScriptName).path
-        let pythonPath = url.appendingPathComponent(".venv/bin/python").path
-        guard FileManager.default.fileExists(atPath: workerPath), FileManager.default.isExecutableFile(atPath: pythonPath) else {
-            log.warning("invalid repo root candidate=\(url.path), worker exists=\(FileManager.default.fileExists(atPath: workerPath)), python executable=\(FileManager.default.isExecutableFile(atPath: pythonPath))")
-            return nil
-        }
-        return url
-#endif
     }
 
     private func handleWorkerState(_ state: WorkerState) {
@@ -224,13 +207,54 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         case .loading:
             log.info("worker state: loading")
             setStatus("Loading ASR worker")
+            updateRetryModelDownloadMenu(isVisible: false, isEnabled: false)
         case .ready:
             log.info("worker state: ready")
             setStatus(hotKeyActive ? readyStatusText() : "Error: accessibility permission needed")
+            updateRetryModelDownloadMenu(isVisible: false, isEnabled: false)
+            hasShownModelDownloadStartMessage = false
         case .failed(let message):
             log.error("worker state: failed: \(message)")
             setStatus("Error: \(message)")
+            updateRetryModelDownloadMenu(isVisible: true, isEnabled: true)
+            showModelFailureAlertIfNeeded(message)
         }
+    }
+
+    private func showModelDownloadStartMessageIfNeeded(_ message: String) {
+        guard !hasShownModelDownloadStartMessage else { return }
+        guard message.hasPrefix("Fetching model manifest") || message.hasPrefix("Downloading model") else { return }
+        hasShownModelDownloadStartMessage = true
+        overlay.show("Downloading speech model...\nThis can take several minutes on first run.")
+        overlay.hide(after: 4.0)
+    }
+
+    private func showModelFailureAlertIfNeeded(_ message: String) {
+        guard !isShowingModelFailureAlert else { return }
+        isShowingModelFailureAlert = true
+
+        let alert = NSAlert()
+        alert.messageText = "Speech Model Setup Failed"
+        alert.informativeText = "DeskScribe ONNX could not prepare the local speech model. Check your network connection or retry the download.\n\n\(message)"
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Retry Download")
+        alert.addButton(withTitle: "Open Debug Log")
+        alert.addButton(withTitle: "OK")
+
+        NSApp.activate(ignoringOtherApps: true)
+        let response = alert.runModal()
+        isShowingModelFailureAlert = false
+
+        if response == .alertFirstButtonReturn {
+            retryModelDownload()
+        } else if response == .alertSecondButtonReturn {
+            openDebugLog()
+        }
+    }
+
+    private func updateRetryModelDownloadMenu(isVisible: Bool, isEnabled: Bool) {
+        retryModelDownloadMenuItem.isHidden = !isVisible
+        retryModelDownloadMenuItem.isEnabled = isEnabled
     }
 
     private func startHotKeyMonitor(promptForAccessibility: Bool) {
@@ -476,7 +500,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let partialStartedAt = Date()
         partialRequestStartedAt = partialStartedAt
 
-#if DESKSCRIBE_NATIVE_ONNX
         guard let snapshotSamples = audioRecorder.snapshotSamples() else {
             partialRequestInFlight = false
             return
@@ -487,19 +510,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.handlePartialTranscriptionResult(result, recordingID: recordingID, startedAt: partialStartedAt)
             }
         }
-#else
-        guard let snapshotURL = audioRecorder.snapshot() else {
-            partialRequestInFlight = false
-            return
-        }
-        log.info("partial transcription request: \(snapshotURL.path), duration=\(String(format: "%.2f", duration))s")
-        worker?.transcribe(audioURL: snapshotURL, vocabulary: AppSettings.vocabulary, priority: .partialPreview) { [weak self] result in
-            DispatchQueue.main.async {
-                try? FileManager.default.removeItem(at: snapshotURL)
-                self?.handlePartialTranscriptionResult(result, recordingID: recordingID, startedAt: partialStartedAt)
-            }
-        }
-#endif
     }
 
     private func handlePartialTranscriptionResult(_ result: Result<String, Error>, recordingID: UUID, startedAt: Date) {
@@ -556,6 +566,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
 
             overlay.hide()
+            TranscriptHistoryStore.append(text: trimmed, appVariant: AppVariant.displayName)
             let sendReturnAfterPaste = shouldSendReturnAfterPaste
             shouldSendReturnAfterPaste = false
             pasteIntoPreviousApp(trimmed, sendReturnAfterPaste: sendReturnAfterPaste)
@@ -780,6 +791,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func restartWorker() {
         log.info("manual worker restart requested")
+        worker?.restart()
+    }
+
+    @objc private func retryModelDownload() {
+        log.info("model download retry requested")
+        updateRetryModelDownloadMenu(isVisible: true, isEnabled: false)
         worker?.restart()
     }
 

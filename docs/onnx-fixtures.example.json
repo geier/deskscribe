@@ -1,0 +1,8 @@
+{
+  "fixtures": [
+    {
+      "path": "fixtures/test-1-2-3.wav",
+      "expected": "Test 123 kannst du mich verstehen."
+    }
+  ]
+}
