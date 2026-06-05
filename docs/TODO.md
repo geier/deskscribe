@@ -1,5 +1,18 @@
 # DeskScribe TODO
 
+## Priority 1: User Installation Story
+
+- Decide final user-facing app name for distribution. Prefer `DeskScribe.app` over `DeskScribe ONNX.app` unless we still need a parallel technical variant.
+- Build a minimal DMG release pipeline, e.g. `scripts/build_release_dmg.sh`, producing `dist/DeskScribe-<version>-arm64.dmg` plus SHA256.
+- Design the DMG as a normal Mac install experience: app icon, Applications shortcut, and drag-to-install layout.
+- Add a first-run setup flow that explains and checks Microphone permission, Accessibility permission, and local model availability.
+- Add an explicit `Download Selected Model` action in the app, while keeping lazy first-use download as a fallback.
+- Show model download state, failures, and retry controls in the app UI before the first dictation attempt.
+- Update README installation docs to lead with the DMG flow: download, drag to Applications, open, approve permissions, download model.
+- Keep Homebrew Cask as the power-user install path and align it with the final app name.
+- Plan Developer ID signing and notarization for public macOS distribution.
+- Plan Sparkle or another update mechanism after the first DMG release path is stable.
+
 ## Native ONNX Runtime
 
 - Add more real shared WAV fixtures for native-vs-`onnx-asr` comparison. (One fixture exists and passes; the comparison harness is `scripts/compare_native_onnx.py`.)
@@ -17,11 +30,11 @@
 
 ## App Packaging
 
-- Add richer Preferences UI for model download state, failures, and retry controls.
+- Track packaging implementation under `Priority 1: User Installation Story` until the DMG install path is complete.
 
 ## Settings UX
 
-- Add richer Model pane controls for runtime/model download state and model update/retry controls.
+- Track model download controls under `Priority 1: User Installation Story` until the first-run install path is complete.
 - Add retention settings for transcript history.
 
 ## Vocabulary Management
