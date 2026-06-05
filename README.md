@@ -38,6 +38,23 @@ DeskScribe needs:
 - Microphone access for recording.
 - Accessibility access for the global hotkey event tap and automatic paste.
 
+## Install
+
+Homebrew is the primary install path for users:
+
+```bash
+brew tap <owner>/deskscribe
+brew install --cask deskscribe
+```
+
+After launching DeskScribe, approve Microphone and Accessibility permissions when macOS asks. The selected speech model is downloaded automatically the first time it is needed and stored locally under:
+
+```text
+~/Library/Application Support/DeskScribe/Models/
+```
+
+The current cask template is in `homebrew/Casks/deskscribe.rb`. After publishing a release, update its version and SHA256.
+
 ## Build
 
 Install ONNX Runtime with Homebrew:
@@ -120,7 +137,7 @@ Compare native app output against `onnx-asr`:
   --repo-root /path/to/deskscribe
 ```
 
-## Homebrew
+## Homebrew Cask Development
 
 The cask template lives at:
 

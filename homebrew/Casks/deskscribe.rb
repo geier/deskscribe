@@ -12,7 +12,9 @@ cask "deskscribe" do
   app "DeskScribe ONNX.app"
 
   caveats <<~EOS
-    DeskScribe runs local speech recognition and may download the ONNX model
-    on first use. Grant Microphone and Accessibility permissions when prompted.
+    DeskScribe runs local speech recognition and downloads the selected model
+    automatically the first time it is needed.
+
+    Grant Microphone and Accessibility permissions when prompted.
   EOS
 end
