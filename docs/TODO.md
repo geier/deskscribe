@@ -8,8 +8,9 @@
 
 ## Future Model Types
 
-- Benchmark Moonshine tiny/base through `sherpa-onnx` on DeskScribe WAV fixtures.
-- Compare Whisper tiny/base or Distil-Whisper against the same fixtures through an existing mature runtime.
+- Build a standalone Moonshine benchmark on DeskScribe WAV fixtures, starting with Tiny/Small or `sherpa-onnx-moonshine-tiny-en-int8` and `sherpa-onnx-moonshine-base-en-int8`.
+- Check Moonshine language coverage before exposing it in Preferences; current small documented paths are promising for English but do not replace Parakeet v3 for German dictation.
+- Compare WhisperKit tiny/base against the same fixtures as an Apple-native quality and packaging baseline.
 - Run a standalone WhisperKit/CoreML spike on shared fixtures before adding a production CoreML runtime.
 - Prototype CTC model support before adding another transducer/RNNT or Whisper-style native decoder.
 - Add runtime selection based on installed model package manifests instead of only validating the current native ONNX family.
