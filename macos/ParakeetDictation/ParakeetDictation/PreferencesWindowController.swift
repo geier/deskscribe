@@ -65,8 +65,8 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
     private let modelRepoField = NSTextField(string: "")
     private let modelFileField = NSTextField(string: "")
     private let modelPresetPopup = NSPopUpButton()
+    private let modelInfoButton = NSButton(title: "i", target: nil, action: nil)
     private let modelRecommendationLabel = NSTextField(wrappingLabelWithString: "")
-    private let modelDownloadNoteLabel = NSTextField(wrappingLabelWithString: "Model packages are downloaded automatically the first time they are needed.")
     private let restorePasteboardCheckbox = NSButton(checkboxWithTitle: "Restore clipboard after pasting", target: nil, action: nil)
     private let launchAtLoginCheckbox = NSButton(checkboxWithTitle: "Open automatically at login", target: nil, action: nil)
     private let vocabularyTableView = NSTableView()
@@ -228,17 +228,17 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         modelPresetPopup.addItems(withTitles: Self.modelPresetTitles)
         modelPresetPopup.target = self
         modelPresetPopup.action = #selector(modelPresetChanged)
+        modelInfoButton.target = self
+        modelInfoButton.action = #selector(showModelInfo)
+        modelInfoButton.bezelStyle = .helpButton
+        modelInfoButton.title = ""
         modelRecommendationLabel.textColor = .secondaryLabelColor
         modelRecommendationLabel.font = .systemFont(ofSize: 11)
-        modelDownloadNoteLabel.textColor = .secondaryLabelColor
-        modelDownloadNoteLabel.font = .systemFont(ofSize: 11)
 
-        stack.addArrangedSubview(row(label: "Model", control: modelPresetPopup))
+        stack.addArrangedSubview(row(label: "Model", control: horizontalControls([modelPresetPopup, modelInfoButton])))
         stack.addArrangedSubview(row(label: "Notes", control: modelRecommendationLabel))
-        stack.addArrangedSubview(row(label: "Download", control: modelDownloadNoteLabel))
         modelPresetPopup.widthAnchor.constraint(equalToConstant: 420).isActive = true
         modelRecommendationLabel.widthAnchor.constraint(equalToConstant: 420).isActive = true
-        modelDownloadNoteLabel.widthAnchor.constraint(equalToConstant: 420).isActive = true
         return wrapper
     }
 
@@ -254,19 +254,20 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         scroll.widthAnchor.constraint(equalToConstant: 590).isActive = true
         scroll.heightAnchor.constraint(equalToConstant: 230).isActive = true
 
-        let help = NSTextField(wrappingLabelWithString: "Add plain preferred words, or replacement rules like 'desk scribe' -> 'DeskScribe'. Existing raw vocabulary is migrated into this list.")
+        let help = NSTextField(wrappingLabelWithString: "Add preferred spellings, or define replacements for phrases DeskScribe should rewrite after transcription.")
         help.textColor = .secondaryLabelColor
         help.font = .systemFont(ofSize: 11)
         help.widthAnchor.constraint(equalToConstant: 590).isActive = true
 
         let addWord = NSButton(title: "Add Word", target: self, action: #selector(addVocabularyWord))
         let addReplacement = NSButton(title: "Add Replacement", target: self, action: #selector(addVocabularyReplacement))
+        let addExamples = NSButton(title: "Add DeskScribe Examples", target: self, action: #selector(addVocabularyExamples))
         let delete = NSButton(title: "Delete Selected", target: self, action: #selector(deleteVocabularyEntry))
         let importButton = NSButton(title: "Import JSON", target: self, action: #selector(importVocabulary))
         let exportButton = NSButton(title: "Export JSON", target: self, action: #selector(exportVocabulary))
 
-        vocabularyPhraseField.placeholderString = "Word or phrase"
-        vocabularyReplacementField.placeholderString = "Replacement"
+        vocabularyPhraseField.placeholderString = "Word or recognized phrase"
+        vocabularyReplacementField.placeholderString = "Write as"
         vocabularyPhraseField.widthAnchor.constraint(equalToConstant: 250).isActive = true
         vocabularyReplacementField.widthAnchor.constraint(equalToConstant: 250).isActive = true
         vocabularyStatusLabel.textColor = .secondaryLabelColor
@@ -275,7 +276,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         stack.addArrangedSubview(scroll)
         stack.addArrangedSubview(help)
         stack.addArrangedSubview(horizontalControls([vocabularyPhraseField, vocabularyReplacementField]))
-        stack.addArrangedSubview(horizontalControls([addWord, addReplacement, delete]))
+        stack.addArrangedSubview(horizontalControls([addWord, addReplacement, addExamples, delete]))
         stack.addArrangedSubview(horizontalControls([importButton, exportButton, vocabularyStatusLabel]))
         return wrapper
     }
@@ -466,6 +467,27 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         updateVocabularyStatus()
     }
 
+    @objc private func addVocabularyExamples() {
+        let examples = [
+            VocabularyEntry(kind: .word, phrase: "DeskScribe", replacement: nil),
+            VocabularyEntry(kind: .word, phrase: "ONNX", replacement: nil),
+            VocabularyEntry(kind: .word, phrase: "Hugging Face", replacement: nil),
+            VocabularyEntry(kind: .word, phrase: "macOS", replacement: nil),
+            VocabularyEntry(kind: .word, phrase: "NVIDIA", replacement: nil),
+            VocabularyEntry(kind: .word, phrase: "Parakeet", replacement: nil),
+            VocabularyEntry(kind: .replacement, phrase: "desk scribe", replacement: "DeskScribe"),
+            VocabularyEntry(kind: .replacement, phrase: "on X", replacement: "ONNX"),
+            VocabularyEntry(kind: .replacement, phrase: "on next", replacement: "ONNX"),
+            VocabularyEntry(kind: .replacement, phrase: "hugging face", replacement: "Hugging Face"),
+            VocabularyEntry(kind: .replacement, phrase: "Mac OS", replacement: "macOS"),
+            VocabularyEntry(kind: .replacement, phrase: "nvidia", replacement: "NVIDIA")
+        ]
+        let beforeCount = vocabularyEntries.count
+        vocabularyEntries = VocabularyCodec.deduplicated(vocabularyEntries + examples)
+        vocabularyTableView.reloadData()
+        updateVocabularyStatus("Added \(vocabularyEntries.count - beforeCount) examples")
+    }
+
     @objc private func deleteVocabularyEntry() {
         let selected = vocabularyTableView.selectedRowIndexes
         guard !selected.isEmpty else { return }
@@ -559,6 +581,14 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         }
         updateModelRecommendation()
         updateModelFieldsVisibility()
+    }
+
+    @objc private func showModelInfo() {
+        showAlert(
+            title: "Model Downloads",
+            message: "DeskScribe downloads the selected model automatically the first time it is needed. Models are stored locally and reused later.",
+            style: .informational
+        )
     }
 
     private func updateModelRecommendation() {
