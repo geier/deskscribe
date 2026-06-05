@@ -19,8 +19,8 @@ DeskScribe is a macOS menu bar dictation app that runs local speech recognition 
 
 DeskScribe currently supports native-compatible NeMo Conformer TDT ONNX packages:
 
+- NVIDIA Parakeet TDT 0.6B v3 Multilingual ONNX: `geier/deskscribe-nvidia-parakeet-tdt-0.6b-v3-onnx` (default)
 - DeskScribe PrimeLine ONNX: `geier/deskscribe-parakeet-primeline-onnx`
-- NVIDIA Parakeet TDT 0.6B v3 ONNX: `geier/deskscribe-nvidia-parakeet-tdt-0.6b-v3-onnx`
 - NVIDIA Parakeet TDT 0.6B v2 English ONNX: `geier/deskscribe-nvidia-parakeet-tdt-0.6b-v2-onnx`
 
 Models are installed under:

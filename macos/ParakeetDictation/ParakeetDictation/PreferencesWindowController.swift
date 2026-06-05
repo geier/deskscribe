@@ -68,7 +68,6 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
     private let modelRecommendationLabel = NSTextField(wrappingLabelWithString: "")
     private let restorePasteboardCheckbox = NSButton(checkboxWithTitle: "Restore clipboard after pasting", target: nil, action: nil)
     private let launchAtLoginCheckbox = NSButton(checkboxWithTitle: "Open automatically at login", target: nil, action: nil)
-    private let launchAtLoginStatusLabel = NSTextField(labelWithString: "")
     private let vocabularyTableView = NSTableView()
     private let vocabularyPhraseField = NSTextField(string: "")
     private let vocabularyReplacementField = NSTextField(string: "")
@@ -202,8 +201,6 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         hotKeyButton.action = #selector(captureHotKey)
         hotKeyButton.bezelStyle = .rounded
 
-        launchAtLoginStatusLabel.textColor = .secondaryLabelColor
-        launchAtLoginStatusLabel.font = .systemFont(ofSize: 11)
         launchAtLoginCheckbox.target = self
         launchAtLoginCheckbox.action = #selector(toggleLaunchAtLogin)
 
@@ -213,7 +210,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         stack.addArrangedSubview(row(label: "Hotkey", control: hotKeyButton))
         stack.addArrangedSubview(row(label: "Trigger", control: triggerModePopup))
         stack.addArrangedSubview(row(label: "Clipboard", control: restorePasteboardCheckbox))
-        stack.addArrangedSubview(row(label: "Login", control: verticalControls([launchAtLoginCheckbox, launchAtLoginStatusLabel])))
+        stack.addArrangedSubview(row(label: "Login", control: launchAtLoginCheckbox))
         stack.addArrangedSubview(row(label: "Permissions", control: permissionsButton))
 
         hotKeyButton.widthAnchor.constraint(equalToConstant: 180).isActive = true
@@ -234,7 +231,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         modelRecommendationLabel.font = .systemFont(ofSize: 11)
 
         stack.addArrangedSubview(row(label: "Model", control: modelPresetPopup))
-        stack.addArrangedSubview(row(label: "Choose", control: modelRecommendationLabel))
+        stack.addArrangedSubview(row(label: "Notes", control: modelRecommendationLabel))
         modelPresetPopup.widthAnchor.constraint(equalToConstant: 420).isActive = true
         modelRecommendationLabel.widthAnchor.constraint(equalToConstant: 420).isActive = true
         return wrapper
@@ -426,13 +423,10 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
     private func loadLaunchAtLoginState() {
         if StartupLaunchAgent.isEnabledForCurrentBundle {
             launchAtLoginCheckbox.state = .on
-            launchAtLoginStatusLabel.stringValue = "On"
         } else if StartupLaunchAgent.configuredBundlePath != nil {
             launchAtLoginCheckbox.state = .on
-            launchAtLoginStatusLabel.stringValue = "Enabled for a different app location"
         } else {
             launchAtLoginCheckbox.state = .off
-            launchAtLoginStatusLabel.stringValue = "Off"
         }
     }
 

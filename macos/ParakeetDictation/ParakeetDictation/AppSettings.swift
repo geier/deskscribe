@@ -30,15 +30,15 @@ enum NativeONNXModelPresets {
         title: "DeskScribe PrimeLine ONNX",
         version: "v1",
         manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-parakeet-primeline-onnx/resolve/main/parakeet-primeline-onnx-v1.manifest.json")!,
-        recommendation: "Best default for German dictation and mixed DeskScribe testing. Choose this unless you specifically want an NVIDIA English model."
+        recommendation: "German-focused model. Try this if it works better for your German dictation."
     )
 
     static let nvidiaTDTv3 = NativeONNXModelPreset(
         id: "nvidia-parakeet-tdt-0.6b-v3-onnx",
-        title: "NVIDIA Parakeet TDT 0.6B v3 ONNX",
+        title: "NVIDIA Parakeet TDT 0.6B v3 Multilingual ONNX",
         version: "v1",
         manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-nvidia-parakeet-tdt-0.6b-v3-onnx/resolve/main/nvidia-parakeet-tdt-0.6b-v3-onnx-v1.manifest.json")!,
-        recommendation: "Use for current NVIDIA Parakeet English ASR. This is the preferred English option to compare against PrimeLine."
+        recommendation: "Recommended default. Supports 25 European languages, including German and English."
     )
 
     static let nvidiaTDTv2 = NativeONNXModelPreset(
@@ -46,11 +46,11 @@ enum NativeONNXModelPresets {
         title: "NVIDIA Parakeet TDT 0.6B v2 English ONNX",
         version: "v1",
         manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-nvidia-parakeet-tdt-0.6b-v2-onnx/resolve/main/nvidia-parakeet-tdt-0.6b-v2-onnx-v1.manifest.json")!,
-        recommendation: "Use for English fallback testing or comparison with the older NVIDIA TDT release. Prefer v3 for normal English use."
+        recommendation: "English-only model. May be preferable if you only dictate English."
     )
 
-    static let all = [primeline, nvidiaTDTv3, nvidiaTDTv2]
-    static let defaultPreset = primeline
+    static let all = [nvidiaTDTv3, primeline, nvidiaTDTv2]
+    static let defaultPreset = nvidiaTDTv3
 
     static func preset(for model: ModelSettings) -> NativeONNXModelPreset {
         all.first { $0.settings == model } ?? defaultPreset
