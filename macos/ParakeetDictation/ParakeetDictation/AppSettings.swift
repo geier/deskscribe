@@ -17,7 +17,10 @@ struct NativeONNXModelPreset: Equatable {
     let title: String
     let version: String
     let manifestURL: URL
-    let recommendation: String
+    let languages: String
+    let bestFor: String
+    let baseModel: String
+    let notes: String
 
     var settings: ModelSettings {
         ModelSettings(repo: id, file: version)
@@ -30,7 +33,10 @@ enum NativeONNXModelPresets {
         title: "DeskScribe PrimeLine ONNX",
         version: "v1",
         manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-parakeet-primeline-onnx/resolve/main/parakeet-primeline-onnx-v1.manifest.json")!,
-        recommendation: "German-focused model. Try this if it works better for your German dictation."
+        languages: "Multilingual",
+        bestFor: "German dictation",
+        baseModel: "NVIDIA Parakeet TDT 0.6B v3",
+        notes: "Optimized for German dictation while retaining multilingual Parakeet v3 support."
     )
 
     static let nvidiaTDTv3 = NativeONNXModelPreset(
@@ -38,7 +44,10 @@ enum NativeONNXModelPresets {
         title: "NVIDIA Parakeet TDT 0.6B v3 Multilingual ONNX",
         version: "v1",
         manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-nvidia-parakeet-tdt-0.6b-v3-onnx/resolve/main/nvidia-parakeet-tdt-0.6b-v3-onnx-v1.manifest.json")!,
-        recommendation: "Recommended default. Supports 25 European languages, including German and English."
+        languages: "25 European languages",
+        bestFor: "General multilingual dictation",
+        baseModel: "NVIDIA Parakeet TDT 0.6B v3",
+        notes: "Recommended default for German, English, and other European languages."
     )
 
     static let nvidiaTDTv2 = NativeONNXModelPreset(
@@ -46,7 +55,10 @@ enum NativeONNXModelPresets {
         title: "NVIDIA Parakeet TDT 0.6B v2 English ONNX",
         version: "v1",
         manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-nvidia-parakeet-tdt-0.6b-v2-onnx/resolve/main/nvidia-parakeet-tdt-0.6b-v2-onnx-v1.manifest.json")!,
-        recommendation: "English-only model. May be preferable if you only dictate English."
+        languages: "English",
+        bestFor: "English-only dictation",
+        baseModel: "NVIDIA Parakeet TDT 0.6B v2",
+        notes: "English-only Parakeet model for users who dictate only in English."
     )
 
     static let all = [nvidiaTDTv3, primeline, nvidiaTDTv2]
