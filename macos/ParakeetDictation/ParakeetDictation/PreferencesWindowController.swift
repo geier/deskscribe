@@ -66,6 +66,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
     private let modelFileField = NSTextField(string: "")
     private let modelPresetPopup = NSPopUpButton()
     private let modelRecommendationLabel = NSTextField(wrappingLabelWithString: "")
+    private let modelDownloadNoteLabel = NSTextField(wrappingLabelWithString: "Model packages are downloaded automatically the first time they are needed.")
     private let restorePasteboardCheckbox = NSButton(checkboxWithTitle: "Restore clipboard after pasting", target: nil, action: nil)
     private let launchAtLoginCheckbox = NSButton(checkboxWithTitle: "Open automatically at login", target: nil, action: nil)
     private let vocabularyTableView = NSTableView()
@@ -229,11 +230,15 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         modelPresetPopup.action = #selector(modelPresetChanged)
         modelRecommendationLabel.textColor = .secondaryLabelColor
         modelRecommendationLabel.font = .systemFont(ofSize: 11)
+        modelDownloadNoteLabel.textColor = .secondaryLabelColor
+        modelDownloadNoteLabel.font = .systemFont(ofSize: 11)
 
         stack.addArrangedSubview(row(label: "Model", control: modelPresetPopup))
         stack.addArrangedSubview(row(label: "Notes", control: modelRecommendationLabel))
+        stack.addArrangedSubview(row(label: "Download", control: modelDownloadNoteLabel))
         modelPresetPopup.widthAnchor.constraint(equalToConstant: 420).isActive = true
         modelRecommendationLabel.widthAnchor.constraint(equalToConstant: 420).isActive = true
+        modelDownloadNoteLabel.widthAnchor.constraint(equalToConstant: 420).isActive = true
         return wrapper
     }
 
