@@ -75,6 +75,14 @@ Build the release app:
 scripts/build_onnx_release.sh
 ```
 
+Package a Homebrew-ready release ZIP and SHA256:
+
+```bash
+VERSION=0.1.0 scripts/package_homebrew_release.sh
+```
+
+This writes `dist/DeskScribe-0.1.0-macos.zip` and `dist/DeskScribe-0.1.0-macos.zip.sha256`.
+
 Install the release app locally:
 
 ```bash
