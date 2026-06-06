@@ -9,7 +9,7 @@ BUILD_VERSION="${BUILD_VERSION:-$(git -C "$ROOT_DIR" rev-parse --short=12 HEAD 2
 DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}" \
   xcodebuild -project "$PROJECT" -scheme DeskScribeONNX -configuration Debug -derivedDataPath "$BUILD_ROOT" CURRENT_PROJECT_VERSION="$BUILD_VERSION" build
 
-"$ROOT_DIR/scripts/embed_onnxruntime.sh" "$BUILD_ROOT/Build/Products/Debug/DeskScribeONNX.app"
+"$ROOT_DIR/scripts/embed_onnxruntime.sh" "$BUILD_ROOT/Build/Products/Debug/DeskScribe.app"
 
 echo "Build version:    $BUILD_VERSION"
-echo "Built ONNX app:   $BUILD_ROOT/Build/Products/Debug/DeskScribeONNX.app"
+echo "Built ONNX app:   $BUILD_ROOT/Build/Products/Debug/DeskScribe.app"

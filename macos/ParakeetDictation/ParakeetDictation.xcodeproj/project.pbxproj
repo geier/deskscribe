@@ -56,7 +56,7 @@
 		A10000000000000000000021 /* DeskScribeIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = Resources/DeskScribeIcon.icns; sourceTree = "<group>"; };
 		A10000000000000000000022 /* VocabularySupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularySupport.swift; sourceTree = "<group>"; };
 		A10000000000000000000023 /* TranscriptHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptHistoryStore.swift; sourceTree = "<group>"; };
-		B10000000000000000000010 /* DeskScribeONNX.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeskScribeONNX.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B10000000000000000000010 /* DeskScribe.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeskScribe.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -89,7 +89,7 @@
 			isa = PBXGroup;
 			children = (
 				A10000000000000000000010 /* DeskScribe.app */,
-				B10000000000000000000010 /* DeskScribeONNX.app */,
+				B10000000000000000000010 /* DeskScribe.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -152,7 +152,7 @@
 			);
 			name = DeskScribeONNX;
 			productName = DeskScribeONNX;
-			productReference = B10000000000000000000010 /* DeskScribeONNX.app */;
+			productReference = B10000000000000000000010 /* DeskScribe.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -389,7 +389,7 @@
 				);
 				HEADER_SEARCH_PATHS = /opt/homebrew/opt/onnxruntime/include;
 				LIBRARY_SEARCH_PATHS = /opt/homebrew/opt/onnxruntime/lib;
-				MARKETING_VERSION = 0.1;
+				MARKETING_VERSION = 0.1.0;
 				OTHER_LDFLAGS = "-lonnxruntime";
 				PRODUCT_BUNDLE_IDENTIFIER = local.DeskScribe;
 				PRODUCT_NAME = DeskScribe;
@@ -417,7 +417,7 @@
 				);
 				HEADER_SEARCH_PATHS = /opt/homebrew/opt/onnxruntime/include;
 				LIBRARY_SEARCH_PATHS = /opt/homebrew/opt/onnxruntime/lib;
-				MARKETING_VERSION = 0.1;
+				MARKETING_VERSION = 0.1.0;
 				OTHER_LDFLAGS = "-lonnxruntime";
 				PRODUCT_BUNDLE_IDENTIFIER = local.DeskScribe;
 				PRODUCT_NAME = DeskScribe;
@@ -429,7 +429,7 @@
 		B10000000000000000000072 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				APP_DISPLAY_NAME = "DeskScribe ONNX";
+				APP_DISPLAY_NAME = DeskScribe;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -445,10 +445,10 @@
 				);
 				HEADER_SEARCH_PATHS = /opt/homebrew/opt/onnxruntime/include;
 				LIBRARY_SEARCH_PATHS = /opt/homebrew/opt/onnxruntime/lib;
-				MARKETING_VERSION = 0.1;
+				MARKETING_VERSION = 0.1.0;
 				OTHER_LDFLAGS = "-lonnxruntime";
-				PRODUCT_BUNDLE_IDENTIFIER = local.DeskScribe.ONNX;
-				PRODUCT_NAME = DeskScribeONNX;
+				PRODUCT_BUNDLE_IDENTIFIER = local.DeskScribe;
+				PRODUCT_NAME = DeskScribe;
 				SWIFT_OBJC_BRIDGING_HEADER = "ParakeetDictation/ParakeetDictation-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
@@ -457,7 +457,7 @@
 		B10000000000000000000073 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				APP_DISPLAY_NAME = "DeskScribe ONNX";
+				APP_DISPLAY_NAME = DeskScribe;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -473,10 +473,10 @@
 				);
 				HEADER_SEARCH_PATHS = /opt/homebrew/opt/onnxruntime/include;
 				LIBRARY_SEARCH_PATHS = /opt/homebrew/opt/onnxruntime/lib;
-				MARKETING_VERSION = 0.1;
+				MARKETING_VERSION = 0.1.0;
 				OTHER_LDFLAGS = "-lonnxruntime";
-				PRODUCT_BUNDLE_IDENTIFIER = local.DeskScribe.ONNX;
-				PRODUCT_NAME = DeskScribeONNX;
+				PRODUCT_BUNDLE_IDENTIFIER = local.DeskScribe;
+				PRODUCT_NAME = DeskScribe;
 				SWIFT_OBJC_BRIDGING_HEADER = "ParakeetDictation/ParakeetDictation-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
