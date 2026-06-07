@@ -235,7 +235,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let alert = NSAlert()
         alert.messageText = "Speech Model Setup Failed"
-        alert.informativeText = "DeskScribe ONNX could not prepare the local speech model. Check your network connection or retry the download.\n\n\(message)"
+        alert.informativeText = "DeskScribe could not prepare the local speech model. Check your network connection or retry the download.\n\n\(message)"
         alert.alertStyle = .warning
         alert.addButton(withTitle: "Retry Download")
         alert.addButton(withTitle: "Open Debug Log")

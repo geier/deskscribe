@@ -82,7 +82,7 @@ The fixture manifest stores `onnx-asr` output as the expected text. The native r
 Native ONNX smoke test from the built app executable:
 
 ```bash
-/path/to/DeskScribeONNX.app/Contents/MacOS/DeskScribeONNX \
+/path/to/DeskScribe.app/Contents/MacOS/DeskScribe \
   --repo-root /path/to/deskscribe \
   --native-onnx-smoke-test /path/to/audio.wav
 ```
@@ -95,7 +95,7 @@ Native-vs-`onnx-asr` comparison harness:
 scripts/compare_native_onnx.py \
   models/parakeet-primeline-onnx \
   --fixtures docs/onnx-fixtures.example.json \
-  --native-app /path/to/DeskScribeONNX.app \
+  --native-app /path/to/DeskScribe.app \
   --repo-root /path/to/deskscribe
 ```
 
@@ -156,7 +156,7 @@ For development, the app falls back to `models/parakeet-primeline-onnx` under th
 ```bash
 .venv/bin/python scripts/export_nemo_onnx.py --output-dir models/parakeet-primeline-onnx
 launchctl setenv DESKSCRIBE_WORKER_ROOT "/Users/cg/tmp/hosting"
-open /var/folders/3x/dysmy0zs1tzcky924d23y5br0000gn/T/opencode/deskscribe-parallel-build/Build/Products/Debug/DeskScribeONNX.app
+open /var/folders/3x/dysmy0zs1tzcky924d23y5br0000gn/T/opencode/deskscribe-parallel-build/Build/Products/Debug/DeskScribe.app
 ```
 
 Check the ONNX app log for native session and vocabulary loading:
@@ -168,7 +168,7 @@ open ~/Library/Logs/DeskScribeONNX/DeskScribeONNX.log
 Output:
 
 ```text
-/var/folders/3x/dysmy0zs1tzcky924d23y5br0000gn/T/opencode/deskscribe-parallel-build/Build/Products/Debug/DeskScribeONNX.app
+/var/folders/3x/dysmy0zs1tzcky924d23y5br0000gn/T/opencode/deskscribe-parallel-build/Build/Products/Debug/DeskScribe.app
 ```
 
 ## Next Native Runtime Work

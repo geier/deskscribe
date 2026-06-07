@@ -16,7 +16,7 @@ Make DeskScribe's first public user installation story work well, with Homebrew 
 - DeskScribe is now a native ONNX-only macOS menu bar app.
 - The legacy Python worker runtime has been removed.
 - Python remains only for model export, packaging, validation, upload, and comparison tooling.
-- The app currently installs as `/Applications/DeskScribe ONNX.app`.
+- The app currently installs as `/Applications/DeskScribe.app`.
 - User-facing install direction has changed: Homebrew Cask should be the main installation path for now. DMG should be treated as a later secondary distribution option.
 - Model weights must not be bundled in the app or Homebrew package. The app downloads model packages on demand from Hugging Face.
 - Current app runtime supports `runtime_type=onnxruntime` and `model_type=nemo-conformer-tdt`.
@@ -53,7 +53,7 @@ Install release app locally:
 If installation is blocked because the app is running:
 
 ```bash
-osascript -e 'tell application "DeskScribe ONNX" to quit'
+osascript -e 'tell application "DeskScribe" to quit'
 ./scripts/install_release_onnx_app.sh
 ```
 
@@ -66,12 +66,12 @@ git log --oneline -3
 
 ## Current App Details
 
-- Bundle ID: `local.DeskScribe.ONNX`
-- Display name: `DeskScribe ONNX`
-- Installed app path: `/Applications/DeskScribe ONNX.app`
+- Bundle ID: `local.DeskScribe`
+- Display name: `DeskScribe`
+- Installed app path: `/Applications/DeskScribe.app`
 - Log path: `~/Library/Logs/DeskScribeONNX/DeskScribeONNX.log`
 - Model install root: `~/Library/Application Support/DeskScribe/Models/`
-- LaunchAgent path for login startup: `~/Library/LaunchAgents/local.DeskScribe.ONNX.startup.plist`
+- LaunchAgent path for login startup: `~/Library/LaunchAgents/local.DeskScribe.startup.plist`
 
 ## Current Model Presets
 

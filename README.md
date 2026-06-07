@@ -43,7 +43,7 @@ DeskScribe needs:
 Homebrew is the primary install path for users:
 
 ```bash
-brew tap <owner>/deskscribe
+brew tap geier/deskscribe https://github.com/geier/deskscribe
 brew install --cask deskscribe
 ```
 
@@ -53,7 +53,7 @@ After launching DeskScribe, approve Microphone and Accessibility permissions whe
 ~/Library/Application Support/DeskScribe/Models/
 ```
 
-The current cask template is in `homebrew/Casks/deskscribe.rb`. After publishing a release, update its version and SHA256.
+The cask is maintained in `homebrew/Casks/deskscribe.rb`.
 
 ## Build
 
@@ -92,7 +92,7 @@ scripts/install_release_onnx_app.sh
 The installed app path is:
 
 ```text
-/Applications/DeskScribe ONNX.app
+/Applications/DeskScribe.app
 ```
 
 Logs are written to:
@@ -141,7 +141,7 @@ Compare native app output against `onnx-asr`:
 .venv/bin/python scripts/compare_native_onnx.py \
   models/parakeet-primeline-onnx \
   --fixtures docs/onnx-fixtures.example.json \
-  --native-app /path/to/DeskScribeONNX.app \
+  --native-app /path/to/DeskScribe.app \
   --repo-root /path/to/deskscribe
 ```
 

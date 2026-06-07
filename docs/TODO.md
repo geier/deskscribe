@@ -2,10 +2,6 @@
 
 ## Priority 1: User Installation Story
 
-- Make Homebrew Cask the primary user installation path for the first public distribution.
-- Decide final user-facing app name for Homebrew distribution. Prefer `DeskScribe.app` over `DeskScribe ONNX.app` unless we still need a parallel technical variant.
-- Update `homebrew/Casks/deskscribe.rb` with final app name, release URL, version, SHA256, and clear caveats.
-- Document tap setup and install command as the main README install flow.
 - Add a first-run setup flow that explains and checks Microphone permission, Accessibility permission, and local model availability.
 - Add an explicit `Download Selected Model` action in the app, while keeping lazy first-use download as a fallback.
 - Show model download state, failures, and retry controls in the app UI before the first dictation attempt.

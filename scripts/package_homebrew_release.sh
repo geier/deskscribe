@@ -3,11 +3,11 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_ROOT="${BUILD_ROOT:-/var/folders/3x/dysmy0zs1tzcky924d23y5br0000gn/T/opencode/deskscribe-onnx-release-build}"
-RELEASE_APP="$BUILD_ROOT/Build/Products/Release/DeskScribeONNX.app"
+RELEASE_APP="$BUILD_ROOT/Build/Products/Release/DeskScribe.app"
 DIST_DIR="${DIST_DIR:-$ROOT_DIR/dist}"
 VERSION="${VERSION:-}"
 BUILD_RELEASE="${BUILD_RELEASE:-1}"
-APP_NAME="${APP_NAME:-DeskScribe ONNX.app}"
+APP_NAME="${APP_NAME:-DeskScribe.app}"
 
 if [[ -z "$VERSION" ]]; then
   tag="$(git -C "$ROOT_DIR" describe --tags --exact-match 2>/dev/null || true)"

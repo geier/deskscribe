@@ -2,7 +2,7 @@
 set -euo pipefail
 
 if [[ $# -ne 1 ]]; then
-  echo "Usage: $0 /path/to/DeskScribeONNX.app" >&2
+  echo "Usage: $0 /path/to/DeskScribe.app" >&2
   exit 2
 fi
 

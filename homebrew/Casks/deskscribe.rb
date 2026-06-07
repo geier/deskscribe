@@ -1,6 +1,6 @@
 cask "deskscribe" do
   version "0.1.0"
-  sha256 "REPLACE_WITH_SHA256"
+  sha256 "3063760e73af2f09a50585be1e686a600d881e6abe750903bbc8f2bc2a9d703e"
 
   url "https://github.com/geier/deskscribe/releases/download/v#{version}/DeskScribe-#{version}-macos.zip"
   name "DeskScribe"
@@ -9,7 +9,7 @@ cask "deskscribe" do
 
   depends_on macos: ">= :ventura"
 
-  app "DeskScribe ONNX.app"
+  app "DeskScribe.app"
 
   caveats <<~EOS
     DeskScribe runs local speech recognition and downloads the selected model
