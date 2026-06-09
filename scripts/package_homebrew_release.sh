@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BUILD_ROOT="${BUILD_ROOT:-/var/folders/3x/dysmy0zs1tzcky924d23y5br0000gn/T/opencode/deskscribe-onnx-release-build}"
+BUILD_ROOT="${BUILD_ROOT:-/var/folders/3x/dysmy0zs1tzcky924d23y5br0000gn/T/opencode/deskscribe-release-build}"
 RELEASE_APP="$BUILD_ROOT/Build/Products/Release/DeskScribe.app"
 DIST_DIR="${DIST_DIR:-$ROOT_DIR/dist}"
 VERSION="${VERSION:-}"
@@ -25,11 +25,11 @@ STAGING_DIR="$DIST_DIR/homebrew-staging"
 STAGED_APP="$STAGING_DIR/$APP_NAME"
 
 if [[ "$BUILD_RELEASE" != "0" ]]; then
-  BUILD_VERSION="$VERSION" "$ROOT_DIR/scripts/build_onnx_release.sh"
+  BUILD_VERSION="$VERSION" "$ROOT_DIR/scripts/build_release.sh"
 fi
 
 if [[ ! -d "$RELEASE_APP" ]]; then
-  echo "Missing $RELEASE_APP. Run scripts/build_onnx_release.sh first or keep BUILD_RELEASE=1." >&2
+  echo "Missing $RELEASE_APP. Run scripts/build_release.sh first or keep BUILD_RELEASE=1." >&2
   exit 1
 fi
 

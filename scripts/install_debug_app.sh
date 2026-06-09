@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BUILD_ROOT="${BUILD_ROOT:-/var/folders/3x/dysmy0zs1tzcky924d23y5br0000gn/T/opencode/deskscribe-parallel-build}"
+BUILD_ROOT="${BUILD_ROOT:-/var/folders/3x/dysmy0zs1tzcky924d23y5br0000gn/T/opencode/deskscribe-debug-build}"
 SOURCE_APP="$BUILD_ROOT/Build/Products/Debug/DeskScribe.app"
 TARGET_APP="/Applications/DeskScribe.app"
 
 if [[ ! -d "$SOURCE_APP" ]]; then
-  echo "Missing $SOURCE_APP. Run scripts/build_parallel_debug.sh first." >&2
+  echo "Missing $SOURCE_APP. Run scripts/build_debug.sh first." >&2
   exit 1
 fi
 

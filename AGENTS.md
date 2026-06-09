@@ -35,26 +35,26 @@ Do not duplicate or replace the TODO list here. Update `docs/TODO.md` as priorit
 Build debug app:
 
 ```bash
-./scripts/build_parallel_debug.sh
+./scripts/build_debug.sh
 ```
 
 Build release app:
 
 ```bash
-./scripts/build_onnx_release.sh
+./scripts/build_release.sh
 ```
 
 Install release app locally:
 
 ```bash
-./scripts/install_release_onnx_app.sh
+./scripts/install_release_app.sh
 ```
 
 If installation is blocked because the app is running:
 
 ```bash
 osascript -e 'tell application "DeskScribe" to quit'
-./scripts/install_release_onnx_app.sh
+./scripts/install_release_app.sh
 ```
 
 Check branch status:
@@ -69,7 +69,7 @@ git log --oneline -3
 - Bundle ID: `local.DeskScribe`
 - Display name: `DeskScribe`
 - Installed app path: `/Applications/DeskScribe.app`
-- Log path: `~/Library/Logs/DeskScribeONNX/DeskScribeONNX.log`
+- Log path: `~/Library/Logs/DeskScribe/DeskScribe.log`
 - Model install root: `~/Library/Application Support/DeskScribe/Models/`
 - LaunchAgent path for login startup: `~/Library/LaunchAgents/local.DeskScribe.startup.plist`
 

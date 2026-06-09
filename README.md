@@ -1,7 +1,7 @@
 # DeskScribe
 
 <p align="center">
-  <img src="macos/ParakeetDictation/ParakeetDictation/Resources/DeskScribeIcon.png" alt="DeskScribe app icon" width="128" height="128">
+  <img src="macos/DeskScribe/DeskScribe/Resources/DeskScribeIcon.png" alt="DeskScribe app icon" width="128" height="128">
 </p>
 
 DeskScribe is a macOS menu bar dictation app that runs local speech recognition through a native ONNX Runtime path.
@@ -66,13 +66,13 @@ brew install onnxruntime
 Build the native debug app:
 
 ```bash
-scripts/build_parallel_debug.sh
+scripts/build_debug.sh
 ```
 
 Build the release app:
 
 ```bash
-scripts/build_onnx_release.sh
+scripts/build_release.sh
 ```
 
 Package a Homebrew-ready release ZIP and SHA256:
@@ -86,7 +86,7 @@ This writes `dist/DeskScribe-0.1.0-macos.zip` and `dist/DeskScribe-0.1.0-macos.z
 Install the release app locally:
 
 ```bash
-scripts/install_release_onnx_app.sh
+scripts/install_release_app.sh
 ```
 
 The installed app path is:
@@ -98,7 +98,7 @@ The installed app path is:
 Logs are written to:
 
 ```text
-~/Library/Logs/DeskScribeONNX/DeskScribeONNX.log
+~/Library/Logs/DeskScribe/DeskScribe.log
 ```
 
 ## Development
@@ -106,16 +106,16 @@ Logs are written to:
 The Xcode project lives at:
 
 ```bash
-macos/ParakeetDictation/ParakeetDictation.xcodeproj
+macos/DeskScribe/DeskScribe.xcodeproj
 ```
 
 Open it with:
 
 ```bash
-open macos/ParakeetDictation/ParakeetDictation.xcodeproj
+open macos/DeskScribe/DeskScribe.xcodeproj
 ```
 
-The main development scheme is `DeskScribeONNX`.
+The main development scheme is `DeskScribe`.
 
 ## Model Tooling
 

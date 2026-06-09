@@ -53,8 +53,8 @@
 
 ## Launch At Login
 
-- Test launch-at-login behavior for the native ONNX app bundle after release installation.
+- Test launch-at-login behavior after release installation.
 
 ## Cleanup
 
-- Keep `docs/NATIVE_ONNX.md` current until the migration is complete.
+- Keep `docs/SPEECH_RUNTIME.md` current until the migration is complete.
