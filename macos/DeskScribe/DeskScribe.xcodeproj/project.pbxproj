@@ -7,20 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A10000000000000000000001 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000011 /* main.swift */; };
-		A10000000000000000000002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000012 /* AppDelegate.swift */; };
-		A10000000000000000000003 /* AudioRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000013 /* AudioRecorder.swift */; };
-		A10000000000000000000004 /* HotKeyMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000014 /* HotKeyMonitor.swift */; };
-		A10000000000000000000005 /* TranscriptOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000015 /* TranscriptOverlay.swift */; };
-		A10000000000000000000006 /* NativeONNXBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001E /* NativeONNXBridge.m */; };
-		A10000000000000000000007 /* DebugLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000018 /* DebugLog.swift */; };
-		A10000000000000000000008 /* AppSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000019 /* AppSettings.swift */; };
-		A10000000000000000000009 /* PreferencesWindowController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001A /* PreferencesWindowController.swift */; };
-		A1000000000000000000000A /* AppVariant.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001B /* AppVariant.swift */; };
-		A1000000000000000000000B /* TranscriptionRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001C /* TranscriptionRuntime.swift */; };
-		A1000000000000000000000C /* DeskScribeIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000021 /* DeskScribeIcon.icns */; };
-		A1000000000000000000000D /* VocabularySupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000022 /* VocabularySupport.swift */; };
-		A1000000000000000000000E /* TranscriptHistoryStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000023 /* TranscriptHistoryStore.swift */; };
 		B1000000000000000000000C /* NativeONNXBridge.m in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000001E /* NativeONNXBridge.m */; };
 		B10000000000000000000001 /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000011 /* main.swift */; };
 		B10000000000000000000002 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000000012 /* AppDelegate.swift */; };
@@ -38,7 +24,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		A10000000000000000000010 /* DeskScribe.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeskScribe.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10000000000000000000011 /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		A10000000000000000000012 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		A10000000000000000000013 /* AudioRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecorder.swift; sourceTree = "<group>"; };
@@ -52,21 +37,14 @@
 		A1000000000000000000001C /* TranscriptionRuntime.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptionRuntime.swift; sourceTree = "<group>"; };
 		A1000000000000000000001D /* NativeONNXBridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NativeONNXBridge.h; sourceTree = "<group>"; };
 		A1000000000000000000001E /* NativeONNXBridge.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NativeONNXBridge.m; sourceTree = "<group>"; };
-		A1000000000000000000001F /* ParakeetDictation-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "ParakeetDictation-Bridging-Header.h"; sourceTree = "<group>"; };
+		A1000000000000000000001F /* DeskScribe-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "DeskScribe-Bridging-Header.h"; sourceTree = "<group>"; };
 		A10000000000000000000021 /* DeskScribeIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = Resources/DeskScribeIcon.icns; sourceTree = "<group>"; };
 		A10000000000000000000022 /* VocabularySupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VocabularySupport.swift; sourceTree = "<group>"; };
 		A10000000000000000000023 /* TranscriptHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranscriptHistoryStore.swift; sourceTree = "<group>"; };
-		B10000000000000000000010 /* DeskScribeONNX.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeskScribeONNX.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B10000000000000000000010 /* DeskScribe.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DeskScribe.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		A10000000000000000000020 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		B10000000000000000000020 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -80,7 +58,7 @@
 		A10000000000000000000030 = {
 			isa = PBXGroup;
 			children = (
-				A10000000000000000000032 /* ParakeetDictation */,
+				A10000000000000000000032 /* DeskScribe */,
 				A10000000000000000000031 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -88,13 +66,12 @@
 		A10000000000000000000031 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A10000000000000000000010 /* DeskScribe.app */,
-				B10000000000000000000010 /* DeskScribeONNX.app */,
+				B10000000000000000000010 /* DeskScribe.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		A10000000000000000000032 /* ParakeetDictation */ = {
+		A10000000000000000000032 /* DeskScribe */ = {
 			isa = PBXGroup;
 			children = (
 				A10000000000000000000017 /* Info.plist */,
@@ -110,37 +87,20 @@
 				A1000000000000000000001C /* TranscriptionRuntime.swift */,
 				A1000000000000000000001D /* NativeONNXBridge.h */,
 				A1000000000000000000001E /* NativeONNXBridge.m */,
-				A1000000000000000000001F /* ParakeetDictation-Bridging-Header.h */,
+				A1000000000000000000001F /* DeskScribe-Bridging-Header.h */,
 				A10000000000000000000022 /* VocabularySupport.swift */,
 				A10000000000000000000023 /* TranscriptHistoryStore.swift */,
 				A10000000000000000000021 /* DeskScribeIcon.icns */,
 			);
-			path = ParakeetDictation;
+			path = DeskScribe;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A10000000000000000000040 /* ParakeetDictation */ = {
+		B10000000000000000000040 /* DeskScribe */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A10000000000000000000061 /* Build configuration list for PBXNativeTarget "ParakeetDictation" */;
-			buildPhases = (
-				A10000000000000000000041 /* Sources */,
-				A10000000000000000000020 /* Frameworks */,
-				A10000000000000000000042 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = ParakeetDictation;
-			productName = ParakeetDictation;
-			productReference = A10000000000000000000010 /* DeskScribe.app */;
-			productType = "com.apple.product-type.application";
-		};
-		B10000000000000000000040 /* DeskScribeONNX */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = B10000000000000000000061 /* Build configuration list for PBXNativeTarget "DeskScribeONNX" */;
+			buildConfigurationList = B10000000000000000000061 /* Build configuration list for PBXNativeTarget "DeskScribe" */;
 			buildPhases = (
 				B10000000000000000000041 /* Sources */,
 				B10000000000000000000020 /* Frameworks */,
@@ -150,9 +110,9 @@
 			);
 			dependencies = (
 			);
-			name = DeskScribeONNX;
-			productName = DeskScribeONNX;
-			productReference = B10000000000000000000010 /* DeskScribeONNX.app */;
+			name = DeskScribe;
+			productName = DeskScribe;
+			productReference = B10000000000000000000010 /* DeskScribe.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -165,15 +125,12 @@
 				LastSwiftUpdateCheck = 1530;
 				LastUpgradeCheck = 1530;
 				TargetAttributes = {
-					A10000000000000000000040 = {
-						CreatedOnToolsVersion = 15.3;
-					};
 					B10000000000000000000040 = {
 						CreatedOnToolsVersion = 15.3;
 					};
 				};
 			};
-			buildConfigurationList = A10000000000000000000060 /* Build configuration list for PBXProject "ParakeetDictation" */;
+			buildConfigurationList = A10000000000000000000060 /* Build configuration list for PBXProject "DeskScribe" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -186,21 +143,12 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				A10000000000000000000040 /* ParakeetDictation */,
-				B10000000000000000000040 /* DeskScribeONNX */,
+				B10000000000000000000040 /* DeskScribe */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		A10000000000000000000042 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				A1000000000000000000000C /* DeskScribeIcon.icns in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		B10000000000000000000042 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -212,26 +160,6 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		A10000000000000000000041 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				A10000000000000000000001 /* main.swift in Sources */,
-				A10000000000000000000002 /* AppDelegate.swift in Sources */,
-				A10000000000000000000003 /* AudioRecorder.swift in Sources */,
-				A10000000000000000000004 /* HotKeyMonitor.swift in Sources */,
-				A10000000000000000000005 /* TranscriptOverlay.swift in Sources */,
-				A10000000000000000000006 /* NativeONNXBridge.m in Sources */,
-				A10000000000000000000007 /* DebugLog.swift in Sources */,
-				A10000000000000000000008 /* AppSettings.swift in Sources */,
-				A10000000000000000000009 /* PreferencesWindowController.swift in Sources */,
-				A1000000000000000000000A /* AppVariant.swift in Sources */,
-				A1000000000000000000000B /* TranscriptionRuntime.swift in Sources */,
-				A1000000000000000000000D /* VocabularySupport.swift in Sources */,
-				A1000000000000000000000E /* TranscriptHistoryStore.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		B10000000000000000000041 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -370,66 +298,10 @@
 			};
 			name = Release;
 		};
-		A10000000000000000000072 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				APP_DISPLAY_NAME = DeskScribe;
-				CODE_SIGN_IDENTITY = "-";
-				CODE_SIGN_STYLE = Manual;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_LANGUAGE = en;
-				ENABLE_HARDENED_RUNTIME = NO;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = ParakeetDictation/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-					/opt/homebrew/opt/onnxruntime/lib,
-				);
-				HEADER_SEARCH_PATHS = /opt/homebrew/opt/onnxruntime/include;
-				LIBRARY_SEARCH_PATHS = /opt/homebrew/opt/onnxruntime/lib;
-				MARKETING_VERSION = 0.1;
-				OTHER_LDFLAGS = "-lonnxruntime";
-				PRODUCT_BUNDLE_IDENTIFIER = local.DeskScribe;
-				PRODUCT_NAME = DeskScribe;
-				SWIFT_OBJC_BRIDGING_HEADER = "ParakeetDictation/ParakeetDictation-Bridging-Header.h";
-				SWIFT_VERSION = 5.0;
-			};
-			name = Debug;
-		};
-		A10000000000000000000073 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				APP_DISPLAY_NAME = DeskScribe;
-				CODE_SIGN_IDENTITY = "-";
-				CODE_SIGN_STYLE = Manual;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_LANGUAGE = en;
-				ENABLE_HARDENED_RUNTIME = NO;
-				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = ParakeetDictation/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-					/opt/homebrew/opt/onnxruntime/lib,
-				);
-				HEADER_SEARCH_PATHS = /opt/homebrew/opt/onnxruntime/include;
-				LIBRARY_SEARCH_PATHS = /opt/homebrew/opt/onnxruntime/lib;
-				MARKETING_VERSION = 0.1;
-				OTHER_LDFLAGS = "-lonnxruntime";
-				PRODUCT_BUNDLE_IDENTIFIER = local.DeskScribe;
-				PRODUCT_NAME = DeskScribe;
-				SWIFT_OBJC_BRIDGING_HEADER = "ParakeetDictation/ParakeetDictation-Bridging-Header.h";
-				SWIFT_VERSION = 5.0;
-			};
-			name = Release;
-		};
 		B10000000000000000000072 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				APP_DISPLAY_NAME = "DeskScribe ONNX";
+				APP_DISPLAY_NAME = DeskScribe;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -437,7 +309,7 @@
 				DEVELOPMENT_LANGUAGE = en;
 				ENABLE_HARDENED_RUNTIME = NO;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = ParakeetDictation/Info.plist;
+				INFOPLIST_FILE = DeskScribe/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -445,11 +317,11 @@
 				);
 				HEADER_SEARCH_PATHS = /opt/homebrew/opt/onnxruntime/include;
 				LIBRARY_SEARCH_PATHS = /opt/homebrew/opt/onnxruntime/lib;
-				MARKETING_VERSION = 0.1;
+				MARKETING_VERSION = 0.1.0;
 				OTHER_LDFLAGS = "-lonnxruntime";
-				PRODUCT_BUNDLE_IDENTIFIER = local.DeskScribe.ONNX;
-				PRODUCT_NAME = DeskScribeONNX;
-				SWIFT_OBJC_BRIDGING_HEADER = "ParakeetDictation/ParakeetDictation-Bridging-Header.h";
+				PRODUCT_BUNDLE_IDENTIFIER = local.DeskScribe;
+				PRODUCT_NAME = DeskScribe;
+				SWIFT_OBJC_BRIDGING_HEADER = "DeskScribe/DeskScribe-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Debug;
@@ -457,7 +329,7 @@
 		B10000000000000000000073 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				APP_DISPLAY_NAME = "DeskScribe ONNX";
+				APP_DISPLAY_NAME = DeskScribe;
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -465,7 +337,7 @@
 				DEVELOPMENT_LANGUAGE = en;
 				ENABLE_HARDENED_RUNTIME = NO;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = ParakeetDictation/Info.plist;
+				INFOPLIST_FILE = DeskScribe/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -473,11 +345,11 @@
 				);
 				HEADER_SEARCH_PATHS = /opt/homebrew/opt/onnxruntime/include;
 				LIBRARY_SEARCH_PATHS = /opt/homebrew/opt/onnxruntime/lib;
-				MARKETING_VERSION = 0.1;
+				MARKETING_VERSION = 0.1.0;
 				OTHER_LDFLAGS = "-lonnxruntime";
-				PRODUCT_BUNDLE_IDENTIFIER = local.DeskScribe.ONNX;
-				PRODUCT_NAME = DeskScribeONNX;
-				SWIFT_OBJC_BRIDGING_HEADER = "ParakeetDictation/ParakeetDictation-Bridging-Header.h";
+				PRODUCT_BUNDLE_IDENTIFIER = local.DeskScribe;
+				PRODUCT_NAME = DeskScribe;
+				SWIFT_OBJC_BRIDGING_HEADER = "DeskScribe/DeskScribe-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 			};
 			name = Release;
@@ -485,7 +357,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A10000000000000000000060 /* Build configuration list for PBXProject "ParakeetDictation" */ = {
+		A10000000000000000000060 /* Build configuration list for PBXProject "DeskScribe" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A10000000000000000000070 /* Debug */,
@@ -494,16 +366,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		A10000000000000000000061 /* Build configuration list for PBXNativeTarget "ParakeetDictation" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				A10000000000000000000072 /* Debug */,
-				A10000000000000000000073 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		B10000000000000000000061 /* Build configuration list for PBXNativeTarget "DeskScribeONNX" */ = {
+		B10000000000000000000061 /* Build configuration list for PBXNativeTarget "DeskScribe" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				B10000000000000000000072 /* Debug */,

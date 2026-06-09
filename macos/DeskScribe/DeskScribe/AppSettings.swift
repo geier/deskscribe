@@ -17,6 +17,9 @@ struct NativeONNXModelPreset: Equatable {
     let title: String
     let version: String
     let manifestURL: URL
+    let languages: String
+    let bestFor: String
+    let notes: String
 
     var settings: ModelSettings {
         ModelSettings(repo: id, file: version)
@@ -28,25 +31,34 @@ enum NativeONNXModelPresets {
         id: "parakeet-primeline-onnx",
         title: "DeskScribe PrimeLine ONNX",
         version: "v1",
-        manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-parakeet-primeline-onnx/resolve/main/parakeet-primeline-onnx-v1.manifest.json")!
+        manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-parakeet-primeline-onnx/resolve/main/parakeet-primeline-onnx-v1.manifest.json")!,
+        languages: "Multilingual",
+        bestFor: "German dictation",
+        notes: "Optimized for German dictation while retaining multilingual Parakeet v3 support."
     )
 
     static let nvidiaTDTv3 = NativeONNXModelPreset(
         id: "nvidia-parakeet-tdt-0.6b-v3-onnx",
-        title: "NVIDIA Parakeet TDT 0.6B v3 ONNX",
+        title: "NVIDIA Parakeet TDT 0.6B v3 Multilingual ONNX",
         version: "v1",
-        manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-nvidia-parakeet-tdt-0.6b-v3-onnx/resolve/main/nvidia-parakeet-tdt-0.6b-v3-onnx-v1.manifest.json")!
+        manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-nvidia-parakeet-tdt-0.6b-v3-onnx/resolve/main/nvidia-parakeet-tdt-0.6b-v3-onnx-v1.manifest.json")!,
+        languages: "25 European languages",
+        bestFor: "General multilingual dictation",
+        notes: "Recommended default for German, English, and other European languages."
     )
 
     static let nvidiaTDTv2 = NativeONNXModelPreset(
         id: "nvidia-parakeet-tdt-0.6b-v2-onnx",
         title: "NVIDIA Parakeet TDT 0.6B v2 English ONNX",
         version: "v1",
-        manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-nvidia-parakeet-tdt-0.6b-v2-onnx/resolve/main/nvidia-parakeet-tdt-0.6b-v2-onnx-v1.manifest.json")!
+        manifestURL: URL(string: "https://huggingface.co/geier/deskscribe-nvidia-parakeet-tdt-0.6b-v2-onnx/resolve/main/nvidia-parakeet-tdt-0.6b-v2-onnx-v1.manifest.json")!,
+        languages: "English",
+        bestFor: "English-only dictation",
+        notes: "English-only Parakeet model for users who dictate only in English."
     )
 
-    static let all = [primeline, nvidiaTDTv3, nvidiaTDTv2]
-    static let defaultPreset = primeline
+    static let all = [nvidiaTDTv3, primeline, nvidiaTDTv2]
+    static let defaultPreset = nvidiaTDTv3
 
     static func preset(for model: ModelSettings) -> NativeONNXModelPreset {
         all.first { $0.settings == model } ?? defaultPreset

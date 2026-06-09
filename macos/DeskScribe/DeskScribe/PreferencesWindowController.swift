@@ -65,9 +65,12 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
     private let modelRepoField = NSTextField(string: "")
     private let modelFileField = NSTextField(string: "")
     private let modelPresetPopup = NSPopUpButton()
+    private let modelInfoButton = NSButton(title: "i", target: nil, action: nil)
+    private let modelLanguagesLabel = NSTextField(wrappingLabelWithString: "")
+    private let modelBestForLabel = NSTextField(wrappingLabelWithString: "")
+    private let modelNotesLabel = NSTextField(wrappingLabelWithString: "")
     private let restorePasteboardCheckbox = NSButton(checkboxWithTitle: "Restore clipboard after pasting", target: nil, action: nil)
     private let launchAtLoginCheckbox = NSButton(checkboxWithTitle: "Open automatically at login", target: nil, action: nil)
-    private let launchAtLoginStatusLabel = NSTextField(labelWithString: "")
     private let vocabularyTableView = NSTableView()
     private let vocabularyPhraseField = NSTextField(string: "")
     private let vocabularyReplacementField = NSTextField(string: "")
@@ -201,8 +204,6 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         hotKeyButton.action = #selector(captureHotKey)
         hotKeyButton.bezelStyle = .rounded
 
-        launchAtLoginStatusLabel.textColor = .secondaryLabelColor
-        launchAtLoginStatusLabel.font = .systemFont(ofSize: 11)
         launchAtLoginCheckbox.target = self
         launchAtLoginCheckbox.action = #selector(toggleLaunchAtLogin)
 
@@ -212,7 +213,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         stack.addArrangedSubview(row(label: "Hotkey", control: hotKeyButton))
         stack.addArrangedSubview(row(label: "Trigger", control: triggerModePopup))
         stack.addArrangedSubview(row(label: "Clipboard", control: restorePasteboardCheckbox))
-        stack.addArrangedSubview(row(label: "Login", control: verticalControls([launchAtLoginCheckbox, launchAtLoginStatusLabel])))
+        stack.addArrangedSubview(row(label: "Login", control: launchAtLoginCheckbox))
         stack.addArrangedSubview(row(label: "Permissions", control: permissionsButton))
 
         hotKeyButton.widthAnchor.constraint(equalToConstant: 180).isActive = true
@@ -229,10 +230,28 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         modelPresetPopup.addItems(withTitles: Self.modelPresetTitles)
         modelPresetPopup.target = self
         modelPresetPopup.action = #selector(modelPresetChanged)
+        modelInfoButton.target = self
+        modelInfoButton.action = #selector(showModelInfo)
+        modelInfoButton.bezelStyle = .helpButton
+        modelInfoButton.title = ""
+        configureModelDetailLabel(modelLanguagesLabel)
+        configureModelDetailLabel(modelBestForLabel)
+        configureModelDetailLabel(modelNotesLabel)
 
-        stack.addArrangedSubview(row(label: "Model", control: modelPresetPopup))
+        stack.addArrangedSubview(row(label: "Model", control: horizontalControls([modelPresetPopup, modelInfoButton])))
+        stack.addArrangedSubview(row(label: "Languages", control: modelLanguagesLabel))
+        stack.addArrangedSubview(row(label: "Best for", control: modelBestForLabel))
+        stack.addArrangedSubview(row(label: "Notes", control: modelNotesLabel))
         modelPresetPopup.widthAnchor.constraint(equalToConstant: 420).isActive = true
+        modelLanguagesLabel.widthAnchor.constraint(equalToConstant: 420).isActive = true
+        modelBestForLabel.widthAnchor.constraint(equalToConstant: 420).isActive = true
+        modelNotesLabel.widthAnchor.constraint(equalToConstant: 420).isActive = true
         return wrapper
+    }
+
+    private func configureModelDetailLabel(_ label: NSTextField) {
+        label.textColor = .secondaryLabelColor
+        label.font = .systemFont(ofSize: 11)
     }
 
     private func vocabularyPane() -> NSView {
@@ -247,19 +266,20 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         scroll.widthAnchor.constraint(equalToConstant: 590).isActive = true
         scroll.heightAnchor.constraint(equalToConstant: 230).isActive = true
 
-        let help = NSTextField(wrappingLabelWithString: "Add plain preferred words, or replacement rules like 'desk scribe' -> 'DeskScribe'. Existing raw vocabulary is migrated into this list.")
+        let help = NSTextField(wrappingLabelWithString: "Add preferred spellings, or define replacements for phrases DeskScribe should rewrite after transcription.")
         help.textColor = .secondaryLabelColor
         help.font = .systemFont(ofSize: 11)
         help.widthAnchor.constraint(equalToConstant: 590).isActive = true
 
         let addWord = NSButton(title: "Add Word", target: self, action: #selector(addVocabularyWord))
         let addReplacement = NSButton(title: "Add Replacement", target: self, action: #selector(addVocabularyReplacement))
+        let addExamples = NSButton(title: "Add DeskScribe Examples", target: self, action: #selector(addVocabularyExamples))
         let delete = NSButton(title: "Delete Selected", target: self, action: #selector(deleteVocabularyEntry))
         let importButton = NSButton(title: "Import JSON", target: self, action: #selector(importVocabulary))
         let exportButton = NSButton(title: "Export JSON", target: self, action: #selector(exportVocabulary))
 
-        vocabularyPhraseField.placeholderString = "Word or phrase"
-        vocabularyReplacementField.placeholderString = "Replacement"
+        vocabularyPhraseField.placeholderString = "Word or recognized phrase"
+        vocabularyReplacementField.placeholderString = "Write as"
         vocabularyPhraseField.widthAnchor.constraint(equalToConstant: 250).isActive = true
         vocabularyReplacementField.widthAnchor.constraint(equalToConstant: 250).isActive = true
         vocabularyStatusLabel.textColor = .secondaryLabelColor
@@ -268,7 +288,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         stack.addArrangedSubview(scroll)
         stack.addArrangedSubview(help)
         stack.addArrangedSubview(horizontalControls([vocabularyPhraseField, vocabularyReplacementField]))
-        stack.addArrangedSubview(horizontalControls([addWord, addReplacement, delete]))
+        stack.addArrangedSubview(horizontalControls([addWord, addReplacement, addExamples, delete]))
         stack.addArrangedSubview(horizontalControls([importButton, exportButton, vocabularyStatusLabel]))
         return wrapper
     }
@@ -366,6 +386,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         updateVocabularyStatus()
         loadLaunchAtLoginState()
         modelPresetPopup.selectItem(withTitle: Self.title(for: model))
+        updateModelDetails()
         updateModelFieldsVisibility()
         refreshHistory()
     }
@@ -420,13 +441,10 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
     private func loadLaunchAtLoginState() {
         if StartupLaunchAgent.isEnabledForCurrentBundle {
             launchAtLoginCheckbox.state = .on
-            launchAtLoginStatusLabel.stringValue = "On"
         } else if StartupLaunchAgent.configuredBundlePath != nil {
             launchAtLoginCheckbox.state = .on
-            launchAtLoginStatusLabel.stringValue = "Enabled for a different app location"
         } else {
             launchAtLoginCheckbox.state = .off
-            launchAtLoginStatusLabel.stringValue = "Off"
         }
     }
 
@@ -459,6 +477,27 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         vocabularyReplacementField.stringValue = ""
         vocabularyTableView.reloadData()
         updateVocabularyStatus()
+    }
+
+    @objc private func addVocabularyExamples() {
+        let examples = [
+            VocabularyEntry(kind: .word, phrase: "DeskScribe", replacement: nil),
+            VocabularyEntry(kind: .word, phrase: "ONNX", replacement: nil),
+            VocabularyEntry(kind: .word, phrase: "Hugging Face", replacement: nil),
+            VocabularyEntry(kind: .word, phrase: "macOS", replacement: nil),
+            VocabularyEntry(kind: .word, phrase: "NVIDIA", replacement: nil),
+            VocabularyEntry(kind: .word, phrase: "Parakeet", replacement: nil),
+            VocabularyEntry(kind: .replacement, phrase: "desk scribe", replacement: "DeskScribe"),
+            VocabularyEntry(kind: .replacement, phrase: "on X", replacement: "ONNX"),
+            VocabularyEntry(kind: .replacement, phrase: "on next", replacement: "ONNX"),
+            VocabularyEntry(kind: .replacement, phrase: "hugging face", replacement: "Hugging Face"),
+            VocabularyEntry(kind: .replacement, phrase: "Mac OS", replacement: "macOS"),
+            VocabularyEntry(kind: .replacement, phrase: "nvidia", replacement: "NVIDIA")
+        ]
+        let beforeCount = vocabularyEntries.count
+        vocabularyEntries = VocabularyCodec.deduplicated(vocabularyEntries + examples)
+        vocabularyTableView.reloadData()
+        updateVocabularyStatus("Added \(vocabularyEntries.count - beforeCount) examples")
     }
 
     @objc private func deleteVocabularyEntry() {
@@ -552,7 +591,23 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
             modelRepoField.stringValue = preset.settings.repo
             modelFileField.stringValue = preset.settings.file
         }
+        updateModelDetails()
         updateModelFieldsVisibility()
+    }
+
+    @objc private func showModelInfo() {
+        showAlert(
+            title: "Model Downloads",
+            message: "DeskScribe downloads the selected model automatically the first time it is needed. Models are stored locally and reused later.",
+            style: .informational
+        )
+    }
+
+    private func updateModelDetails() {
+        let preset = NativeONNXModelPresets.preset(titled: modelPresetPopup.titleOfSelectedItem) ?? NativeONNXModelPresets.defaultPreset
+        modelLanguagesLabel.stringValue = preset.languages
+        modelBestForLabel.stringValue = preset.bestFor
+        modelNotesLabel.stringValue = preset.notes
     }
 
     private func updateModelFieldsVisibility() {
@@ -584,6 +639,7 @@ final class PreferencesWindowController: NSWindowController, NSWindowDelegate, N
         updateVocabularyStatus()
         restorePasteboardCheckbox.state = AppSettings.defaultRestorePasteboardAfterPaste ? .on : .off
         modelPresetPopup.selectItem(withTitle: Self.defaultModelTitle)
+        updateModelDetails()
         updateModelFieldsVisibility()
     }
 

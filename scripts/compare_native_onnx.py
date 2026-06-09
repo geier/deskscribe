@@ -8,14 +8,14 @@ from pathlib import Path
 from typing import Any
 
 
-DEFAULT_NATIVE_APP = "/var/folders/3x/dysmy0zs1tzcky924d23y5br0000gn/T/opencode/deskscribe-parallel-build/Build/Products/Debug/DeskScribeONNX.app"
+DEFAULT_NATIVE_APP = "/var/folders/3x/dysmy0zs1tzcky924d23y5br0000gn/T/opencode/deskscribe-debug-build/Build/Products/Debug/DeskScribe.app"
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Compare native DeskScribeONNX output against onnx-asr on shared WAV fixtures.")
+    parser = argparse.ArgumentParser(description="Compare DeskScribe output against onnx-asr on shared WAV fixtures.")
     parser.add_argument("model_dir", help="Exported ONNX model directory for onnx-asr.")
     parser.add_argument("--fixtures", required=True, help="JSON fixture manifest with WAV paths.")
-    parser.add_argument("--native-app", default=DEFAULT_NATIVE_APP, help="Path to DeskScribeONNX.app or its executable.")
+    parser.add_argument("--native-app", default=DEFAULT_NATIVE_APP, help="Path to DeskScribe.app or its executable.")
     parser.add_argument("--repo-root", default=".", help="Repo root passed to the native smoke-test CLI.")
     parser.add_argument("--write-results", default=None, help="Optional path to write comparison results as JSON.")
     return parser.parse_args()
@@ -48,7 +48,7 @@ def load_fixture_paths(fixtures_path: Path) -> list[Path]:
 def native_executable(native_app: Path) -> Path:
     native_app = native_app.expanduser().resolve()
     if native_app.suffix == ".app":
-        executable = native_app / "Contents/MacOS/DeskScribeONNX"
+        executable = native_app / "Contents/MacOS/DeskScribe"
     else:
         executable = native_app
     if not executable.exists():

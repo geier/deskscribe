@@ -1,22 +1,22 @@
-# Native ONNX Spike
+# Speech Runtime
 
 DeskScribe now uses a native ONNX Runtime path for local transcription. Python is retained only for model export, packaging, upload, and validation tooling.
 
 ## Current Status
 
-- `DeskScribeONNX` builds the native ONNX app.
+- `DeskScribe` builds the native speech app.
 - The NeMo checkpoint exports successfully to ONNX.
 - The exported ONNX artifacts validate successfully.
 - `onnx-asr` can load the exported artifacts and transcribe a WAV file successfully.
-- `DeskScribeONNX` loads the exported ONNX sessions in-process through ONNX Runtime.
-- `DeskScribeONNX` validates the ONNX model package directly and no longer needs `.venv/bin/python` or an ASR worker at startup.
-- `DeskScribeONNX` now loads `vocab.txt` natively and runs a first native transcription path from PCM16 WAV input through preprocessing, ONNX encoder inference, TDT greedy decoding, and text reconstruction.
+- `DeskScribe` loads the exported ONNX sessions in-process through ONNX Runtime.
+- `DeskScribe` validates the ONNX model package directly and no longer needs `.venv/bin/python` or an ASR worker at startup.
+- `DeskScribe` now loads `vocab.txt` natively and runs a first native transcription path from PCM16 WAV input through preprocessing, ONNX encoder inference, TDT greedy decoding, and text reconstruction.
 - The export package now includes `mel_fbanks_nemo128.bin`, the `onnx-asr` Nemo 128-bin mel filterbank matrix required for native preprocessing.
 - The native runtime checks the selected package under `~/Library/Application Support/DeskScribe/Models/<model-id>-<version>` first, then falls back to the matching development export under `models/<model-id>`.
-- If no valid local model package exists, `DeskScribeONNX` fetches the model manifest from Hugging Face, downloads the ZIP archive, verifies SHA256, and installs it under `~/Library/Application Support/DeskScribe/Models/`.
+- If no valid local model package exists, `DeskScribe` fetches the model manifest from Hugging Face, downloads the ZIP archive, verifies SHA256, and installs it under `~/Library/Application Support/DeskScribe/Models/`.
 - The native Preferences model popup now offers PrimeLine ONNX plus NVIDIA Parakeet TDT v3 and NVIDIA Parakeet TDT v2 English packages.
 
-`DeskScribeONNX` starts through `NativeONNXRuntime` and loads ONNX Runtime sessions in-process.
+`DeskScribe` starts through `NativeONNXRuntime` and loads ONNX Runtime sessions in-process.
 
 ## Export Model
 
@@ -82,7 +82,7 @@ The fixture manifest stores `onnx-asr` output as the expected text. The native r
 Native ONNX smoke test from the built app executable:
 
 ```bash
-/path/to/DeskScribeONNX.app/Contents/MacOS/DeskScribeONNX \
+/path/to/DeskScribe.app/Contents/MacOS/DeskScribe \
   --repo-root /path/to/deskscribe \
   --native-onnx-smoke-test /path/to/audio.wav
 ```
@@ -95,7 +95,7 @@ Native-vs-`onnx-asr` comparison harness:
 scripts/compare_native_onnx.py \
   models/parakeet-primeline-onnx \
   --fixtures docs/onnx-fixtures.example.json \
-  --native-app /path/to/DeskScribeONNX.app \
+  --native-app /path/to/DeskScribe.app \
   --repo-root /path/to/deskscribe
 ```
 
@@ -140,12 +140,12 @@ https://huggingface.co/geier/deskscribe-nvidia-parakeet-tdt-0.6b-v2-onnx/resolve
 ## Build App
 
 ```bash
-scripts/build_parallel_debug.sh
+scripts/build_debug.sh
 ```
 
-## Run ONNX App
+## Run App
 
-Install or export the model first, then launch the ONNX app. The preferred installed model directory is:
+Install or export the model first, then launch the app. The preferred installed model directory is:
 
 ```text
 ~/Library/Application Support/DeskScribe/Models/parakeet-primeline-onnx-v1
@@ -156,19 +156,19 @@ For development, the app falls back to `models/parakeet-primeline-onnx` under th
 ```bash
 .venv/bin/python scripts/export_nemo_onnx.py --output-dir models/parakeet-primeline-onnx
 launchctl setenv DESKSCRIBE_WORKER_ROOT "/Users/cg/tmp/hosting"
-open /var/folders/3x/dysmy0zs1tzcky924d23y5br0000gn/T/opencode/deskscribe-parallel-build/Build/Products/Debug/DeskScribeONNX.app
+open /var/folders/3x/dysmy0zs1tzcky924d23y5br0000gn/T/opencode/deskscribe-debug-build/Build/Products/Debug/DeskScribe.app
 ```
 
-Check the ONNX app log for native session and vocabulary loading:
+Check the app log for native session and vocabulary loading:
 
 ```bash
-open ~/Library/Logs/DeskScribeONNX/DeskScribeONNX.log
+open ~/Library/Logs/DeskScribe/DeskScribe.log
 ```
 
 Output:
 
 ```text
-/var/folders/3x/dysmy0zs1tzcky924d23y5br0000gn/T/opencode/deskscribe-parallel-build/Build/Products/Debug/DeskScribeONNX.app
+/var/folders/3x/dysmy0zs1tzcky924d23y5br0000gn/T/opencode/deskscribe-debug-build/Build/Products/Debug/DeskScribe.app
 ```
 
 ## Next Native Runtime Work

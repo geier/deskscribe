@@ -32,7 +32,7 @@ static NSString *const NativeONNXBridgeErrorDomain = @"local.DeskScribe.NativeON
         return nil;
     }
 
-    if (![self checkStatus:_api->CreateEnv(ORT_LOGGING_LEVEL_WARNING, "DeskScribeONNX", &_env) error:error]) {
+    if (![self checkStatus:_api->CreateEnv(ORT_LOGGING_LEVEL_WARNING, "DeskScribe", &_env) error:error]) {
         return nil;
     }
     if (![self checkStatus:_api->CreateSessionOptions(&_sessionOptions) error:error]) {
@@ -57,7 +57,7 @@ static NSString *const NativeONNXBridgeErrorDomain = @"local.DeskScribe.NativeON
     if (![self checkStatus:_api->EnableMemPattern(_sessionOptions) error:error]) {
         return nil;
     }
-    NSLog(@"DeskScribe ONNX session options: intraOpThreads=%d interOpThreads=1 execution=sequential graphOptimization=all cpuArena=enabled memPattern=enabled", intraOpThreads);
+    NSLog(@"DeskScribe speech session options: intraOpThreads=%d interOpThreads=1 execution=sequential graphOptimization=all cpuArena=enabled memPattern=enabled", intraOpThreads);
 
     NSURL *encoderURL = [modelDirectory URLByAppendingPathComponent:@"encoder-model.onnx"];
     NSURL *decoderURL = [modelDirectory URLByAppendingPathComponent:@"decoder_joint-model.onnx"];

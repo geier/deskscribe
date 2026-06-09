@@ -1,5 +1,14 @@
 # DeskScribe TODO
 
+## Priority 1: User Installation Story
+
+- Add a first-run setup flow that explains and checks Microphone permission, Accessibility permission, and local model availability.
+- Add an explicit `Download Selected Model` action in the app, while keeping lazy first-use download as a fallback.
+- Show model download state, failures, and retry controls in the app UI before the first dictation attempt.
+- Keep DMG as a secondary distribution option after the Homebrew path is stable.
+- Plan Developer ID signing and notarization for public macOS distribution.
+- Plan Sparkle or another update mechanism after the first Homebrew-based release path is stable.
+
 ## Native ONNX Runtime
 
 - Add more real shared WAV fixtures for native-vs-`onnx-asr` comparison. (One fixture exists and passes; the comparison harness is `scripts/compare_native_onnx.py`.)
@@ -8,19 +17,20 @@
 
 ## Future Model Types
 
-- Benchmark Moonshine tiny/base through `sherpa-onnx` on DeskScribe WAV fixtures.
-- Compare Whisper tiny/base or Distil-Whisper against the same fixtures through an existing mature runtime.
+- Build a standalone Moonshine benchmark on DeskScribe WAV fixtures, starting with Tiny/Small or `sherpa-onnx-moonshine-tiny-en-int8` and `sherpa-onnx-moonshine-base-en-int8`.
+- Check Moonshine language coverage before exposing it in Preferences; current small documented paths are promising for English but do not replace Parakeet v3 for German dictation.
+- Compare WhisperKit tiny/base against the same fixtures as an Apple-native quality and packaging baseline.
 - Run a standalone WhisperKit/CoreML spike on shared fixtures before adding a production CoreML runtime.
 - Prototype CTC model support before adding another transducer/RNNT or Whisper-style native decoder.
 - Add runtime selection based on installed model package manifests instead of only validating the current native ONNX family.
 
 ## App Packaging
 
-- Add richer Preferences UI for model download state, failures, and retry controls.
+- Track packaging implementation under `Priority 1: User Installation Story` until the Homebrew install path is complete.
 
 ## Settings UX
 
-- Add richer Model pane controls for runtime/model download state and model update/retry controls.
+- Track model download controls under `Priority 1: User Installation Story` until the first-run install path is complete.
 - Add retention settings for transcript history.
 
 ## Vocabulary Management
@@ -43,8 +53,8 @@
 
 ## Launch At Login
 
-- Test launch-at-login behavior for the native ONNX app bundle after release installation.
+- Test launch-at-login behavior after release installation.
 
 ## Cleanup
 
-- Keep `docs/NATIVE_ONNX.md` current until the migration is complete.
+- Keep `docs/SPEECH_RUNTIME.md` current until the migration is complete.
