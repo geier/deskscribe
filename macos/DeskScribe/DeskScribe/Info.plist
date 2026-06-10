@@ -33,7 +33,5 @@
 	</dict>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>DeskScribe records audio while dictation is active.</string>
-	<key>DeskScribeWorkerRoot</key>
-	<string>$(SRCROOT)/../..</string>
 </dict>
 </plist>

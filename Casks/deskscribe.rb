@@ -1,6 +1,6 @@
 cask "deskscribe" do
-  version "0.1.0"
-  sha256 "3063760e73af2f09a50585be1e686a600d881e6abe750903bbc8f2bc2a9d703e"
+  version "0.1.1"
+  sha256 "79b9692cb72c8a8ad4db8a3f6b78d4f91e86d2323bf7676ef52946163d5caca5"
 
   url "https://github.com/geier/deskscribe/releases/download/v#{version}/DeskScribe-#{version}-macos.zip"
   name "DeskScribe"

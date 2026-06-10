@@ -12,8 +12,11 @@ Homebrew is the primary install path:
 
 ```bash
 brew tap geier/deskscribe https://github.com/geier/deskscribe
+brew trust geier/deskscribe
 brew install --cask deskscribe
 ```
+
+Homebrew requires `brew trust` for third-party taps before installing casks from them.
 
 Launch DeskScribe, then approve the macOS permission prompts:
 
