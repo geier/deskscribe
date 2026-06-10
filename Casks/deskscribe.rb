@@ -4,7 +4,7 @@ cask "deskscribe" do
 
   url "https://github.com/geier/deskscribe/releases/download/v#{version}/DeskScribe-#{version}-macos.zip"
   name "DeskScribe"
-  desc "Menu bar dictation app using local native ONNX ASR"
+  desc "Menu bar dictation app using local speech recognition"
   homepage "https://github.com/geier/deskscribe"
 
   depends_on macos: ">= :ventura"
