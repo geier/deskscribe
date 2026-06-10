@@ -7,7 +7,7 @@ cask "deskscribe" do
   desc "Menu bar dictation app using local speech recognition"
   homepage "https://github.com/geier/deskscribe"
 
-  depends_on macos: ">= :ventura"
+  depends_on macos: :ventura
 
   app "DeskScribe.app"
 
